@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arquitetura de Processadores VLIW</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      .code-block {
+        font-family: "Courier New", monospace;
+        background-color: #2d2d2d;
+        color: #f8f8f2;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        margin: 1rem 0;
+      }
+
+      .table-container {
+        overflow-x: auto;
+        margin: 1rem 0;
+      }
+
+      .table-container table {
+        min-width: 600px;
+      }
+
+      .highlight {
+        background-color: #fffbdd;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+      }
+
+      .exercise {
+        background-color: #f0f9ff;
+        border-left: 4px solid #3b82f6;
+        padding: 1rem;
+        margin: 1.5rem 0;
+        border-radius: 0 0.5rem 0.5rem 0;
+      }
+
+      .solution {
+        background-color: #f0fdf4;
+        border-left: 4px solid #10b981;
+        padding: 1rem;
+        margin: 1.5rem 0;
+        border-radius: 0 0.5rem 0.5rem 0;
+      }
+
+      @media (max-width: 768px) {
+        .hero-title {
+          font-size: 1.8rem;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 text-gray-800">
+    <!-- Header -->
+    <header
+      class="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-12 px-4 sm:px-6 lg:px-8"
+    >
+      <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-center">
+          <div class="mb-6 md:mb-0">
+            <h1 class="text-4xl font-bold mb-2">Arquitetura VLIW</h1>
+            <h2 class="text-2xl font-semibold">
+              Explorando o paralelismo em nível de instrução
+            </h2>
+          </div>
+          <div class="flex space-x-4">
+            <div
+              id="goHome"
+              class="flex justify-center items-center gap-4 bg-blue-700 p-4 rounded-lg shadow-md cursor-pointer hover:bg-blue-800 transition-colors duration-300"
+            >
+              <i class="fas fa-microchip text-3xl"></i>
+              <p class="font-medium">Arquitetura de Computadores</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <!-- Introduction Section -->
+      <section id="introducao" class="mb-12">
+        <div class="flex items-center mb-6">
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-800">
+            <i class="fas fa-lightbulb text-yellow-500 mr-3"></i> Introdução
+          </h2>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <p class="mb-4">
+            <span class="font-bold text-blue-700"
+              >VLIW (Very Long Instruction Word)</span
+            >
+            é uma arquitetura de processador que busca explorar o paralelismo em
+            nível de instrução. Em vez de deixar que o hardware descubra quais
+            instruções podem ser executadas em paralelo (como no caso de
+            arquiteturas superescalares), essa responsabilidade é atribuída ao
+            compilador.
+          </p>
+
+          <p class="mb-4">
+            O compilador organiza instruções muito longas para executar
+            múltiplas operações em paralelo. Cada palavra de instrução contém
+            campos independentes, formando "palavras longas de instrução" que
+            são executadas simultaneamente, que controlam diferentes unidades
+            funcionais (ALU, unidade de memória, desvio, etc.).
+          </p>
+
+          <div class="bg-blue-50 border-l-4 border-blue-500 p-4 my-6">
+            <h3 class="font-bold text-blue-800 mb-2">
+              <i class="fas fa-key text-blue-600 mr-2"></i> Princípios
+              Fundamentais
+            </h3>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>
+                <span class="font-semibold">Paralelismo Explícito:</span> O
+                compilador é responsável por detectar e agrupar operações
+                independentes.
+              </li>
+              <li>
+                <span class="font-semibold">Hardware Simplificado:</span> Não há
+                lógica complexa para detecção de paralelismo em tempo de
+                execução (como em superscalar).
+              </li>
+              <li>
+                <span class="font-semibold">Instruções Fixas:</span> O formato
+                da instrução define quantas operações podem ser executadas por
+                ciclo.
+              </li>
+            </ul>
+          </div>
+
+          <h3 class="font-bold text-lg mt-6 mb-3">
+            <i class="fas fa-code text-gray-600 mr-2"></i> Exemplo de Instrução
+            VLIW
+          </h3>
+          <div class="code-block">
+            | Operação 1 (ALU) | Operação 2 (Memória) | Operação 3 (Desvio) |
+          </div>
+          <p class="text-sm text-gray-600 mt-2">
+            Cada campo é executado em paralelo por unidades funcionais
+            dedicadas.
+          </p>
+        </div>
+
+        <!-- History Section -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h3 class="font-bold text-xl mb-4 flex items-center">
+            <i class="fas fa-history text-purple-600 mr-3"></i> Histórico e
+            Motivação
+          </h3>
+
+          <p class="mb-4">
+            A arquitetura
+            <span class="font-semibold">VLIW (Very Long Instruction Word)</span>
+            surgiu na década de 1980 como resposta ao desafio de explorar o
+            paralelismo em nível de instrução (ILP) de forma mais eficiente. Na
+            época, arquitetos de processadores buscavam executar múltiplas
+            instruções simultaneamente, mas enfrentavam limitações no design do
+            hardware.
+          </p>
+
+          <p class="mb-4">
+            Projetos pioneiros como o
+            <span class="font-semibold">Multiflow Trace</span> demonstraram a
+            viabilidade dessa abordagem. Mais tarde, a filosofia
+            <span class="font-semibold"
+              >EPIC (Explicitly Parallel Instruction Computing)</span
+            >, usada no
+            <span class="font-semibold">Intel Itanium (IA-64)</span>, aprofundou
+            esses conceitos.
+          </p>
+
+          <p class="mb-4">
+            A principal motivação era
+            <span class="font-semibold">reduzir a complexidade do hardware</span
+            >, transferindo para o compilador a tarefa de identificar
+            paralelismo.
+          </p>
+
+          <div class="bg-purple-50 border-l-4 border-purple-500 p-4 mt-6">
+            <h4 class="font-bold text-purple-800 mb-2">
+              <i class="fas fa-info-circle text-purple-600 mr-2"></i> Em resumo:
+            </h4>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>
+                <span class="font-semibold">Década de 1980:</span> Surge como
+                alternativa às arquiteturas superescalares.
+              </li>
+              <li>
+                <span class="font-semibold">Pioneiros:</span> Multiflow Trace e
+                EPIC (Intel Itanium).
+              </li>
+              <li>
+                <span class="font-semibold">Motivação:</span> Hardware simples,
+                delegando inteligência ao compilador.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Comparison Section -->
+      <section id="comparacao" class="mb-12">
+        <div class="flex items-center mb-6">
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-800">
+            <i class="fas fa-balance-scale text-green-600 mr-3"></i> RISC, CISC
+            e VLIW
+          </h2>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h3 class="font-bold text-xl mb-4">
+            <i class="fas fa-puzzle-piece text-green-600 mr-3"></i>
+            Características das Arquiteturas
+          </h3>
+
+          <ul class="list-disc pl-5 space-y-2 mb-6">
+            <li>
+              <span class="font-semibold"
+                >RISC (Reduced Instruction Set Computer):</span
+              >
+              Instruções simples, geralmente com o mesmo tamanho, otimizadas
+              para execução rápida e pipeline eficiente. Ex: MIPS, ARM.
+            </li>
+            <li>
+              <span class="font-semibold"
+                >CISC (Complex Instruction Set Computer):</span
+              >
+              Instruções mais complexas que podem realizar várias operações. Ex:
+              x86.
+            </li>
+            <li>
+              <span class="font-semibold">VLIW:</span> Agrupa várias instruções
+              simples (como em RISC) em uma única instrução longa. O paralelismo
+              é extraído estaticamente, ou seja, pelo compilador.
+            </li>
+          </ul>
+
+          <div class="table-container">
+            <table class="min-w-full border border-gray-200">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-2 text-left border-b">Critério</th>
+                  <th class="px-4 py-2 text-left border-b">CISC</th>
+                  <th class="px-4 py-2 text-left border-b">RISC</th>
+                  <th class="px-4 py-2 text-left border-b">VLIW</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-2 border-b">Instruções</td>
+                  <td class="px-4 py-2 border-b">Complexas, variáveis</td>
+                  <td class="px-4 py-2 border-b">Simples, fixas</td>
+                  <td class="px-4 py-2 border-b">Muito longas, paralelas</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-2 border-b">Hardware</td>
+                  <td class="px-4 py-2 border-b">Complexo</td>
+                  <td class="px-4 py-2 border-b">Moderado</td>
+                  <td class="px-4 py-2 border-b">Simplificado</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-2 border-b">Paralelismo</td>
+                  <td class="px-4 py-2 border-b">Limitado (hardware)</td>
+                  <td class="px-4 py-2 border-b">Superscalar (hardware)</td>
+                  <td class="px-4 py-2 border-b">Explícito (compilador)</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-2 border-b">Exemplos</td>
+                  <td class="px-4 py-2 border-b">x86</td>
+                  <td class="px-4 py-2 border-b">ARM, MIPS</td>
+                  <td class="px-4 py-2 border-b">Itanium, Texas C6x</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            <div class="bg-green-50 border-l-4 border-green-500 p-4">
+              <h4 class="font-bold text-green-800 mb-2">
+                <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                Vantagens do VLIW
+              </h4>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>Alto desempenho com paralelismo previsível (ILP)</li>
+                <li>
+                  Redução de consumo energético, pois o controle do paralelismo
+                  está no compilador
+                </li>
+                <li>Hardware simples</li>
+              </ul>
+            </div>
+
+            <div class="bg-red-50 border-l-4 border-red-500 p-4">
+              <h4 class="font-bold text-red-800 mb-2">
+                <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
+                Desvantagens do VLIW
+              </h4>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>Necessidade de compiladores sofisticados</li>
+                <li>
+                  Baixa compatibilidade binária (as instruções são otimizadas
+                  para hardware específico)
+                </li>
+                <li>
+                  Dificuldade em lidar com desvios imprevisíveis (branches)
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pipeline Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h3 class="font-bold text-xl mb-4">
+            <i class="fas fa-cogs text-orange-600 mr-3"></i> Pipeline VLIW e seu
+            funcionamento
+          </h3>
+
+          <h4 class="font-semibold text-lg mb-3">
+            Como Funciona o Pipeline VLIW?
+          </h4>
+
+          <p class="mb-4">
+            Em um processador VLIW, há múltiplas unidades funcionais (ex: ALU,
+            FPU) que podem operar simultaneamente. A palavra de instrução longa
+            contém uma instrução para cada unidade funcional. O pipeline executa
+            essas instruções de forma paralela, desde que sejam independentes.
+          </p>
+
+          <div class="bg-orange-50 border-l-4 border-orange-500 p-4 my-4">
+            <h5 class="font-bold text-orange-800 mb-2">
+              Estágios do pipeline VLIW:
+            </h5>
+            <ol class="list-decimal pl-5 space-y-1">
+              <li>
+                <span class="font-semibold">Fetch:</span> Busca da instrução
+                VLIW (uma palavra longa)
+              </li>
+              <li>
+                <span class="font-semibold">Decode:</span> Decodificação para
+                unidades funcionais
+              </li>
+              <li>
+                <span class="font-semibold">Execute:</span> Operações executadas
+                em paralelo
+              </li>
+            </ol>
+          </div>
+
+          <h5 class="font-semibold mb-2">
+            Exemplo de pipeline com 4 unidades:
+          </h5>
+          <div class="code-block">
+            [Fetch] → [Decode] → [ALU] | [Memória] | [Desvio] | [Multiplicação]
+          </div>
+
+          <h4 class="font-semibold text-lg mt-6 mb-3">Exemplo de Execução</h4>
+
+          <h5 class="font-semibold mb-2">Código Sequencial:</h5>
+          <div class="code-block">
+            LOAD R1, [A] &nbsp&nbsp ; R1 = [A]<br />
+            LOAD R2, [B]&nbsp&nbsp&nbsp ; R2 = [B]<br />
+            ADD R3, R1, R2&nbsp ; R3 = R1 + R2<br />
+            STORE [C], R3&nbsp&nbsp ; [C] = R3
+          </div>
+
+          <h5 class="font-semibold mt-4 mb-2">
+            Escalonamento VLIW (4 unidades):
+          </h5>
+          <div class="code-block">
+            Ciclo 1: [LOAD R1 A]&nbsp&nbsp&nbsp&nbsp[LOAD R2 B]&nbsp&nbsp[NOP]
+            [NOP] // Independentes<br />
+            Ciclo 2: [ADD R3 R1 R2] [STORE C R3] [NOP] [NOP] // ADD → STORE
+          </div>
+          <p class="text-sm text-gray-600 mt-2">
+            <span class="font-semibold">NOP:</span> Indica os slots não
+            utilizados (espaço vazio sem operação), pois não há instruções
+            suficientes para preencher todos os paralelismos disponíveis naquele
+            ciclo.
+          </p>
+        </div>
+
+        <!-- Compiler Section -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h3 class="font-bold text-xl mb-4">
+            <i class="fas fa-code-compare text-indigo-600 mr-3"></i>
+            Escalonamento Estático e o Papel do Compilador
+          </h3>
+
+          <p class="mb-4">
+            É responsabilidade do compilador analisar dependências de dados e
+            instruções para detectar as operações independentes, organizar as
+            instruções de modo a evitar conflitos agrupando-as em palavras VLIM,
+            caso ocorram dependências o compilador deve usar registradores
+            extras para evitar hazards. Quando não há instrução apropriada, o
+            compilador insere "NOPs" (operações nulas).
+          </p>
+
+          <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 my-4">
+            <h4 class="font-bold text-indigo-800 mb-2">
+              Responsabilidades do Compilador
+            </h4>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Detectar operações independentes</li>
+              <li>Agrupar em palavras VLIW</li>
+              <li>
+                Gerenciar dependências (Usar registradores extras (NOPs) para
+                evitar conflitos de dados hazards)
+              </li>
+            </ul>
+          </div>
+
+          <h4 class="font-semibold text-lg mt-6 mb-3">Exemplo:</h4>
+          <div class="code-block">
+            Original:<br />
+            1. A = B + C<br />
+            2. D = A + E
+            <br /><br />
+            → Escalonado para VLIW:<br />
+            [ADD B C A] [NOP] [ADD A E D]
+          </div>
+        </div>
+      </section>
+
+      <!-- Advanced Scheduling Section -->
+      <section class="mb-12">
+        <div class="flex items-center mb-6">
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-800">
+            <i class="fas fa-chart-line text-teal-600 mr-3"></i> Escalonamento
+            Avançado: Diretivas de Otimização
+          </h2>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h3 class="font-bold text-xl mb-4">
+            <i class="fas fa-sync-alt text-teal-600 mr-3"></i> Loop Unrolling
+            (Desenrolamento de Laços)
+          </h3>
+
+          <p class="mb-4">
+            Repetições de laços são expandidas em várias instruções, reduzindo o
+            overhead do controle de fluxo e facilitando o paralelismo.
+          </p>
+
+          <h4 class="font-semibold text-lg mt-4 mb-3">Exemplo em C:</h4>
+
+          <h5 class="font-semibold mb-2">Original:</h5>
+          <div class="code-block">
+            for (int i=0; i&lt;4; i++) { sum += array[i]; }
+          </div>
+
+          <h5 class="font-semibold mt-4 mb-2">Unrolled:</h5>
+          <div class="code-block">
+            sum += array[0]; sum += array[1]; sum += array[2]; sum += array[3];
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h3 class="font-bold text-xl mb-4">
+            <i class="fas fa-recycle text-teal-600 mr-3"></i> Escalonamento
+            Cíclico
+          </h3>
+
+          <p class="mb-4">
+            Utiliza de duas técnicas, o
+            <span class="font-semibold">Loop Unrolling</span> para aumenta o
+            corpo do loop e expor mais o paralelismo. E
+            <span class="font-semibold">Software Pipelining</span> que
+            reorganiza instruções de diferentes iterações de um loop para
+            execução simultânea, aumentando a eficiência do pipeline.
+          </p>
+
+          <h4 class="font-semibold text-lg mt-4 mb-3">
+            Exemplo de Software Pipelining:
+          </h4>
+          <div class="code-block">
+            Iteração 1: LOAD A | LOAD B &nbsp| NOP
+            <br />Iteração 2: ADD &nbsp&nbsp&nbsp| STORE C | LOAD A
+            <br />Iteração 3: LOAD B | ADD &nbsp&nbsp&nbsp&nbsp| STORE C
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h3 class="font-bold text-xl mb-4">
+            <i class="fas fa-shapes text-teal-600 mr-3"></i> Predicação
+          </h3>
+
+          <p class="mb-4">
+            Substitui instruções condicionais (branches como "if") por operações
+            condicionais baseada em predicados. Isso evita desvios e melhora o
+            paralelismo.
+          </p>
+
+          <h4 class="font-semibold text-lg mt-4 mb-3">Exemplo em C:</h4>
+
+          <h5 class="font-semibold mb-2">Tradicional:</h5>
+          <div class="code-block">
+            if (cond) { a = b + c; } else { a = d - e; }
+          </div>
+
+          <h5 class="font-semibold mt-4 mb-2">Predicado:</h5>
+          <div class="code-block">a = cond ? (b + c) : (d - e);</div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h3 class="font-bold text-xl mb-4">
+            <i class="fas fa-random text-teal-600 mr-3"></i> Escalonamento
+            Acíclico com Predicação
+          </h3>
+
+          <p class="mb-4">
+            Elimina desvios condicionais usando operações predicadas.
+          </p>
+
+          <h4 class="font-semibold text-lg mt-4 mb-3">Exemplo em C:</h4>
+
+          <h5 class="font-semibold mb-2">Antes:</h5>
+          <div class="code-block">
+            if (x > 0) { y = a + b; } else { y = c - d; }
+          </div>
+
+          <h5 class="font-semibold mt-4 mb-2">Depois:</h5>
+          <div class="code-block">
+            p = (x > 0); <br />
+            y = p ? (a + b) : (c - d);
+          </div>
+        </div>
+      </section>
+
+      <!-- Itanium Section -->
+      <section class="mb-12">
+        <div class="flex items-center mb-6">
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-800">
+            <i class="fas fa-microchip text-amber-600 mr-3"></i> Processador
+            Itanium (IA-64) e o Futuro do VLIW
+          </h2>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h3 class="font-bold text-xl mb-4">O que é o Itanium?</h3>
+
+          <p class="mb-4">
+            Desenvolvido pela Intel e HP, o Itanium é baseado na arquitetura
+            <span class="font-semibold"
+              >EPIC (Explicitly Parallel Instruction Computing)</span
+            >, que é uma <span class="font-semibold">evolução do VLIW</span>.
+            Utiliza grupos de três instruções por palavra e inclui recursos como
+            predicação e janelas de registradores rotativas.
+          </p>
+
+          <div class="bg-amber-50 border-l-4 border-amber-500 p-4 my-6">
+            <h4 class="font-bold text-amber-800 mb-2">Características:</h4>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>
+                <span class="font-semibold"
+                  >Baseado em EPIC (Evolved VLIW)</span
+                >
+                - Arquitetura que explora paralelismo extremo para alto
+                desempenho.
+              </li>
+              <li>
+                <span class="font-semibold"
+                  >128 registradores inteiros + 128 registradores de ponto
+                  flutuante</span
+                >
+                - Permite grande capacidade de armazenamento interno para
+                processamento rápido.
+              </li>
+              <li>
+                <span class="font-semibold"
+                  >Predicação e janelas rotativas</span
+                >
+                - Evita desvios condicionais e melhora o uso de registradores em
+                chamadas de função.
+              </li>
+              <li>
+                <span class="font-semibold">64 registradores de predicado</span>
+                - Utilizados para controlar o fluxo de execução sem necessidade
+                de ramificações (branches).
+              </li>
+              <li>
+                <span class="font-semibold"
+                  >Instruções de 128 bits com 3 operações simultâneas</span
+                >
+                - Executa múltiplas operações por ciclo, maximizando o
+                throughput.
+              </li>
+            </ul>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            <div class="bg-red-50 border-l-4 border-red-500 p-4">
+              <h4 class="font-bold text-red-800 mb-2">
+                <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
+                Desafios
+              </h4>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>Complexidade na escrita de compiladores eficazes</li>
+                <li>Baixa compatibilidade com softwares legados</li>
+                <li>Competitividade inferior a arquiteturas x86-64</li>
+              </ul>
+            </div>
+
+            <div class="bg-green-50 border-l-4 border-green-500 p-4">
+              <h4 class="font-bold text-green-800 mb-2">
+                <i class="fas fa-check-circle text-green-600 mr-2"></i> Sucessos
+                / Fracassos
+              </h4>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>Alto desempenho em aplicações científicas e HPC</li>
+                <li>
+                  Complexidade de programação e fracasso comercial pela
+                  competição com x86-64
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h3 class="font-bold text-xl mb-4">
+            <i class="fas fa-hourglass-half text-purple-600 mr-3"></i> Futuro do
+            VLIW e Aplicações
+          </h3>
+
+          <p class="mb-4">
+            Embora o Itanium não tenha tido o sucesso esperado, o conceito de
+            VLIW continua vivo em sistemas embarcados e DSPs, onde o paralelismo
+            pode ser rigidamente controlado e os programas são bem definidos em
+            tempo de compilação.
+          </p>
+
+          <ul class="list-disc pl-5 space-y-2">
+            <li>
+              <span class="font-semibold">GPUs:</span> Usam conceitos similares
+              para paralelismo massivo.
+            </li>
+            <li>
+              <span class="font-semibold">DSPs:</span> Texas Instruments C6x,
+              usado em processamento de sinais.
+            </li>
+            <li>
+              <span class="font-semibold">Lições:</span> Flexibilidade e
+              compatibilidade são críticas para adoção em CPUs gerais.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Exercises Section -->
+      <section id="exercicios" class="mb-12">
+        <div class="flex items-center mb-6">
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-800">
+            <i class="fas fa-pencil-alt text-blue-600 mr-3"></i> Exercícios
+          </h2>
+        </div>
+
+        <div class="exercise">
+          <h3 class="font-bold text-lg mb-3">Exercício 1:</h3>
+          <p class="mb-4">
+            Dado o seguinte código, escalone as instruções para execução em uma
+            arquitetura VLIW com duas unidades funcionais.
+          </p>
+          <div class="code-block">
+            ADD R1, R2, R3 ; R1 = R2 + R3<br />
+            ADD R4, R5, R6 ; R4 = R5 + R6<br />
+            MUL R7, R1, R8 ; R7 = R1 * R8
+          </div>
+        </div>
+
+        <div class="exercise">
+          <h3 class="font-bold text-lg mb-3">Exercício 2:</h3>
+          <p class="mb-4">
+            Escalone o código abaixo para VLIW (suponha 3 unidades funcionais:
+            ALU, LOAD/STORE, MULT).
+          </p>
+          <div class="code-block">
+            LOAD R1, [A] &nbsp&nbsp ; R1 = [A]<br />
+            LOAD R2, [B] &nbsp&nbsp ; R2 = [B]<br />
+            MUL R3, R1, R2&nbsp ; R3 = R1 * R2<br />
+            ADD R4, R3, #10 ; R4 = R3 + 10<br />
+            STORE [C], R4 &nbsp ; [C] = R4
+          </div>
+        </div>
+
+        <div class="exercise">
+          <h3 class="font-bold text-lg mb-3">Exercício 3:</h3>
+          <p>Por que o Itanium não substituiu as arquiteturas x86?</p>
+        </div>
+      </section>
+
+      <!-- Solutions Section -->
+      <section class="mb-12">
+        <div class="flex items-center mb-6">
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-800">
+            <i class="fas fa-check-circle text-green-600 mr-3"></i> Soluções
+          </h2>
+        </div>
+
+        <div class="solution">
+          <h3 class="font-bold text-lg mb-3">Exercício 1:</h3>
+          <div class="code-block">
+            Ciclo 1: [ADD R2 R3 R1] [ADD R5 R6 R4] // Paralelas<br />
+            Ciclo 2: [MUL R1 R8 R7] [NOP] // MUL depende de ADD
+          </div>
+        </div>
+
+        <div class="solution">
+          <h3 class="font-bold text-lg mb-3">Exercício 2:</h3>
+          <div class="code-block">
+            Ciclo 1: [LOAD R1 A] &nbsp&nbsp&nbsp&nbsp [LOAD R2 B]&nbsp [NOP] //
+            Independentes<br />
+            Ciclo 2: [MUL R3 R1 R2] &nbsp [NOP] &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+            [NOP] // Espera dos LOADs<br />
+            Ciclo 3: [ADD R4 R3 #10]&nbsp [STORE C R4] [NOP] // ADD → STORE
+          </div>
+        </div>
+
+        <div class="solution">
+          <h3 class="font-bold text-lg mb-3">Exercício 3:</h3>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Dependência de compiladores complexos</li>
+            <li>Falta de compatibilidade binária</li>
+            <li>
+              x86-64 evoluiu com técnicas superescalares mais eficientes
+              dominando o mercado
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- References Section -->
+      <section>
+        <div class="flex items-center mb-6">
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-800">
+            <i class="fas fa-book text-gray-600 mr-3"></i> Referências
+          </h2>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h3 class="font-bold text-lg mb-4">
+            <i class="fas fa-book-open text-gray-500 mr-3"></i> Livros:
+          </h3>
+          <ul class="list-disc pl-5 space-y-2">
+            <li>
+              <span class="font-semibold"
+                >"Embedded Computing: A VLIW Approach to Architecture, Compilers
+                and Tools"</span
+              ><br />
+              <span class="text-sm text-gray-600"
+                >Autores: Joseph A. Fisher, Paolo Faraboschi, Cliff Young</span
+              >
+            </li>
+            <li>
+              <span class="font-semibold"
+                >"Organização e Projeto de Computadores – Interface
+                Hardware/Software"</span
+              ><br />
+              <span class="text-sm text-gray-600"
+                >Autores: David A. Patterson, John L. Hennessy</span
+              ><br />
+              <span class="text-sm text-gray-600"
+                >Edição: 4ª ed. Rio de Janeiro: Campus, 2010. ISBN
+                978-85-3523-585-2</span
+              >
+            </li>
+          </ul>
+
+          <h3 class="font-bold text-lg mt-6 mb-4">
+            <i class="fas fa-newspaper text-gray-500 mr-3"></i> Artigos e
+            Materiais Online:
+          </h3>
+          <ul class="list-disc pl-5 space-y-2">
+            <li>
+              <span class="font-semibold">Artigo:</span> "The Rise and Fall of
+              the Intel Itanium"
+            </li>
+            <li>
+              <span class="font-semibold">GeeksforGeeks:</span>
+              <a
+                href="https://www.geeksforgeeks.org/very-long-instruction-word-vliw-architecture/"
+                class="text-blue-600 hover:underline"
+                >Very Long Instruction Word (VLIW) Architecture</a
+              >
+            </li>
+            <li>
+              <span class="font-semibold">CMU Slides:</span>
+              <a
+                href="https://www.cs.cmu.edu/afs/cs/academic/class/15740-s18/www/lectures/17-18-vliw.pdf"
+                class="text-blue-600 hover:underline"
+                >VLIW Architecture - Carnegie Mellon University (Lecture
+                Slides)</a
+              >
+            </li>
+            <li>
+              <span class="font-semibold">Wikipedia (IA-64):</span>
+              <a
+                href="https://pt.wikipedia.org/wiki/IA-64"
+                class="text-blue-600 hover:underline"
+                >IA-64 – Wikipédia</a
+              >
+            </li>
+            <li>
+              <span class="font-semibold">Auburn University:</span>
+              <a
+                href="https://www.eng.auburn.edu/~nelson/courses/elec5200_6200/ELEC5200_6200_ISA_OtherArchs.pdf"
+                class="text-blue-600 hover:underline"
+                >ISA e Outras Arquiteturas – ELEC5200/6200</a
+              >
+            </li>
+            <li>
+              <span class="font-semibold">AnandTech:</span>
+              <a
+                href="https://www.anandtech.com/show/5826/mips-technologies-updates-processor-ip-lineup-with-aptiv-series"
+                class="text-blue-600 hover:underline"
+                >MIPS Technologies atualiza processadores com a série Aptiv</a
+              >
+            </li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <!-- Back to top button -->
+    <button
+      id="backToTop"
+      class="fixed bottom-6 right-6 bg-blue-600 text-white px-4 py-3 rounded-full shadow-lg hidden"
+    >
+      <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script>
+      // Back to top button
+      const backToTopButton = document.getElementById("backToTop");
+
+      window.addEventListener("scroll", () => {
+        if (window.pageYOffset > 300) {
+          backToTopButton.classList.remove("hidden");
+        } else {
+          backToTopButton.classList.add("hidden");
+        }
+      });
+
+      backToTopButton.addEventListener("click", () => {
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      });
+
+      // Redireciona para index.html ao clicar no cabeçalho azul
+      document.getElementById("goHome").addEventListener("click", function () {
+        window.location.href = "index.html";
+      });
+    </script>
+  </body>
+</html>

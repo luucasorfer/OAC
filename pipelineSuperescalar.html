@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pipelines Superescalares e Escalonamento Dinâmico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      .timeline-item {
+        position: relative;
+        padding-left: 2.5rem;
+        margin-bottom: 2rem;
+      }
+      .timeline-item:before {
+        content: "";
+        position: absolute;
+        left: 0.75rem;
+        top: 0;
+        height: 100%;
+        width: 2px;
+        background: #3b82f6;
+      }
+      .timeline-dot {
+        position: absolute;
+        left: 0.5rem;
+        top: 0.25rem;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        background: #3b82f6;
+      }
+      .code-block {
+        font-family: "Courier New", monospace;
+        background-color: #1e293b;
+        color: #f8fafc;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+      }
+      .pipeline-stage {
+        display: inline-block;
+        width: 4rem;
+        text-align: center;
+        padding: 0.5rem;
+        margin: 0.1rem;
+        border-radius: 0.25rem;
+        font-weight: 600;
+      }
+      .comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .comparison-table th,
+      .comparison-table td {
+        border: 1px solid #e2e8f0;
+        padding: 0.75rem;
+        text-align: left;
+      }
+      .comparison-table th {
+        background-color: #f1f5f9;
+      }
+      .hazard-card {
+        transition: all 0.3s ease;
+      }
+      .hazard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      }
+      @media print {
+        .page-break {
+          break-before: page;
+          page-break-before: always;
+        }
+        body {
+          background: white !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 text-gray-800">
+    <header
+      class="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-12 px-4 sm:px-6 lg:px-8"
+    >
+      <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-center">
+          <div class="mb-6 md:mb-0">
+            <h1 class="text-4xl font-bold mb-2">Pipelines Superescalares</h1>
+            <h2 class="text-2xl font-semibold">
+              Paralelismo e Eficiência em Processadores Modernos
+            </h2>
+          </div>
+          <div class="flex space-x-4">
+            <div
+              id="goHome"
+              class="flex justify-center items-center gap-4 bg-blue-700 p-4 rounded-lg shadow-md cursor-pointer hover:bg-blue-800 transition-colors duration-300"
+            >
+              <i class="fas fa-microchip text-3xl"></i>
+              <p class="font-medium">Arquitetura de Computadores</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div class="p-6">
+          <div class="flex items-center mb-4">
+            <div class="bg-blue-100 p-3 rounded-full mr-4">
+              <i class="fas fa-history text-blue-600 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800">
+              Revisão: Pipeline Clássico de 5 Estágios
+            </h3>
+          </div>
+
+          <p class="text-gray-600 mb-4">
+            Um pipeline básico divide a execução de uma instrução em estágios
+            sequenciais, permitindo que múltiplas instruções sejam processadas
+            simultaneamente.
+          </p>
+
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3 text-gray-700">
+              Estágios do Pipeline Clássico:
+            </h4>
+            <div class="flex flex-wrap justify-center gap-1 mb-4">
+              <div class="pipeline-stage bg-blue-100 text-blue-800">IF</div>
+              <div class="pipeline-stage bg-blue-200 text-blue-800">ID</div>
+              <div class="pipeline-stage bg-blue-300 text-blue-800">EX</div>
+              <div class="pipeline-stage bg-blue-400 text-blue-800">MEM</div>
+              <div class="pipeline-stage bg-blue-500 text-white">WB</div>
+            </div>
+            <ol class="list-decimal pl-5 space-y-2">
+              <li>
+                <span class="font-semibold">IF – Instruction Fetch:</span> busca
+                da instrução na memória.
+              </li>
+              <li>
+                <span class="font-semibold">ID – Instruction Decode:</span>
+                decodificação da instrução e leitura de registradores.
+              </li>
+              <li>
+                <span class="font-semibold">EX – Execute:</span> execução da
+                operação (soma, comparação etc.).
+              </li>
+              <li>
+                <span class="font-semibold">MEM – Memory Access:</span> acesso à
+                memória (se necessário).
+              </li>
+              <li>
+                <span class="font-semibold">WB – Write Back:</span> escrita do
+                resultado no registrador.
+              </li>
+            </ol>
+          </div>
+
+          <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+            <p class="font-medium text-yellow-800">
+              A ideia é que, enquanto uma instrução está em um estágio, outras
+              podem ocupar os seguintes, como uma esteira de produção.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div class="p-6">
+          <div class="flex items-center mb-4">
+            <div class="bg-blue-100 p-3 rounded-full mr-4">
+              <i class="fas fa-lightbulb text-blue-600 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800">
+              Limitações de Pipelines Simples e Introdução ao Superescalar
+              In-Order
+            </h3>
+          </div>
+
+          <p class="text-gray-600 mb-4">
+            Os pipelines de instruções são uma das técnicas mais fundamentais
+            para aumentar o desempenho em processadores modernos. No entanto,
+            pipelines simples (como o clássico de 5 estágios) têm limitações
+            intrínsecas que impedem ganhos significativos de desempenho em
+            aplicações complexas.
+          </p>
+
+          <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+            <p class="font-medium text-blue-800">
+              O tempo de execução de uma aplicação depende principalmente de
+              três fatores:
+            </p>
+            <ul class="list-disc pl-5 mt-2 space-y-1">
+              <li>A contagem total de instruções</li>
+              <li>O tempo de ciclo de relógio</li>
+              <li>O CPI (Ciclos por Instrução) médio</li>
+            </ul>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h4 class="font-bold text-lg mb-2 text-gray-700">
+                CPI (Ciclos por Instrução)
+              </h4>
+              <p class="text-gray-600">
+                Indica quantos ciclos, em média, uma instrução demora para ser
+                concluída.
+              </p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h4 class="font-bold text-lg mb-2 text-gray-700">
+                IPC (Instruções por Ciclo)
+              </h4>
+              <p class="text-gray-600">
+                É o inverso do CPI e indica quantas instruções ficam prontas por
+                ciclo, em média.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div class="p-6">
+          <div class="flex items-center mb-4">
+            <div class="bg-red-100 p-3 rounded-full mr-4">
+              <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800">
+              Hazards (Perigos) que Limitam esse Pipeline
+            </h3>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div
+              class="hazard-card bg-red-50 p-4 rounded-lg border border-red-200"
+            >
+              <h4 class="font-bold text-lg mb-2 text-red-700 flex items-center">
+                <i class="fas fa-cogs mr-2"></i> Hazard Estrutural
+              </h4>
+              <p class="text-gray-600">
+                Falta de hardware para atender todas as instruções ao mesmo
+                tempo (ex: 1 só unidade de memória).
+              </p>
+            </div>
+            <div
+              class="hazard-card bg-orange-50 p-4 rounded-lg border border-orange-200"
+            >
+              <h4
+                class="font-bold text-lg mb-2 text-orange-700 flex items-center"
+              >
+                <i class="fas fa-database mr-2"></i> Hazard de Dados
+              </h4>
+              <p class="text-gray-600">
+                Uma instrução depende do resultado da anterior.
+              </p>
+            </div>
+            <div
+              class="hazard-card bg-purple-50 p-4 rounded-lg border border-purple-200"
+            >
+              <h4
+                class="font-bold text-lg mb-2 text-purple-700 flex items-center"
+              >
+                <i class="fas fa-code-branch mr-2"></i> Hazard de Controle
+              </h4>
+              <p class="text-gray-600">
+                Desvios e branches que mudam o fluxo do programa (pula pra outro
+                lugar).
+              </p>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3 text-gray-700">
+              Exemplo de Hazard de Dados:
+            </h4>
+            <div class="code-block mb-4">
+              <span class="text-blue-300">ADD R1, R2, R3</span>
+              <span class="text-gray-500">; IF → ID → EX → MEM → WB</span><br />
+              <span class="text-blue-300">SUB R4, R1, R5</span>
+              <span class="text-gray-500"
+                >; Depende do resultado de R1 (hazard de dados).</span
+              >
+            </div>
+            <p class="text-gray-600 mb-2">
+              Diagrama simples com stalls devido a um hazard de dados:
+            </p>
+            <div class="code-block">
+              <span class="text-gray-400">Instrução 1:</span> IF | ID | EX | MEM
+              | WB<br />
+              <span class="text-gray-400">Instrução 2:</span> IF | ID |
+              <span class="text-red-400">STALL</span> | EX | MEM | WB
+            </div>
+          </div>
+
+          <div class="bg-red-50 border-l-4 border-red-400 p-4">
+            <p class="font-medium text-red-800">
+              Esses perigos causam
+              <span class="font-bold">stalls</span> (atrasos) no pipeline.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div class="p-6">
+          <div class="flex items-center mb-4">
+            <div class="bg-red-100 p-3 rounded-full mr-4">
+              <i class="fas fa-times-circle text-red-600 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800">
+              Limitações dos Pipelines Simples
+            </h3>
+          </div>
+
+          <p class="text-gray-600 mb-4">
+            Apesar de eficientes para cenários básicos, pipelines simples
+            enfrentam gargalos críticos:
+          </p>
+
+          <div class="space-y-4 mb-6">
+            <div class="flex items-start">
+              <div class="bg-red-100 p-2 rounded-full mr-3 mt-1">
+                <i class="fas fa-tachometer-alt text-red-600"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-lg text-gray-700">
+                  Baixo IPC (Instruções por Ciclo)
+                </h4>
+                <p class="text-gray-600">Devido a dependências e stalls.</p>
+                <div class="bg-gray-50 p-3 rounded-lg mt-2">
+                  <p class="text-gray-700">
+                    <span class="font-semibold">Causa:</span> Hazards forçam a
+                    inserção de bolhas (stalls) no pipeline o que reduz a
+                    eficiência.
+                  </p>
+                  <p class="text-gray-700 mt-1">
+                    <span class="font-semibold">Exemplo:</span> Uma dependência
+                    RAW entre
+                    <code class="bg-gray-200 px-1 rounded">ADD</code> e
+                    <code class="bg-gray-200 px-1 rounded">SUB</code> causa 1
+                    ciclo de stall.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-start">
+              <div class="bg-orange-100 p-2 rounded-full mr-3 mt-1">
+                <i class="fas fa-chart-pie text-orange-600"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-lg text-gray-700">
+                  Subutilização de recursos (unidades funcionais ociosas)
+                </h4>
+                <div class="bg-gray-50 p-3 rounded-lg mt-2">
+                  <p class="text-gray-700">
+                    Unidades funcionais (ex.: ULA, FPU) ficam ociosas enquanto
+                    outras instruções são processadas.
+                  </p>
+                  <p class="text-gray-700 mt-1">
+                    <span class="font-semibold">Exemplo:</span> Enquanto uma
+                    instrução está em MEM, a ULA pode estar inativa.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-start">
+              <div class="bg-blue-100 p-2 rounded-full mr-3 mt-1">
+                <i class="fas fa-project-diagram text-blue-600"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-lg text-gray-700">
+                  Limitação de Paralelismo
+                </h4>
+                <div class="bg-gray-50 p-3 rounded-lg mt-2">
+                  <p class="text-gray-700">
+                    Apenas uma instrução é despachada por ciclo, mesmo que o
+                    hardware tenha os recursos disponíveis.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h4 class="font-bold text-lg mb-3 text-gray-700">
+            Comparação de desempenho em um cenário teórico:
+          </h4>
+          <div class="overflow-x-auto">
+            <table class="comparison-table">
+              <thead>
+                <tr>
+                  <th>Cenário</th>
+                  <th>IPC Ideal</th>
+                  <th>IPC Real (com stalls)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Pipeline Simples</td>
+                  <td>1</td>
+                  <td>0.6–0.8</td>
+                </tr>
+                <tr>
+                  <td>Superescalar (2-way)</td>
+                  <td>2</td>
+                  <td>1.2–1.6</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div class="p-6">
+          <div class="flex items-center mb-4">
+            <div class="bg-green-100 p-3 rounded-full mr-4">
+              <i class="fas fa-rocket text-green-600 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800">
+              Introdução ao Superescalar In-Order
+            </h3>
+          </div>
+
+          <p class="text-gray-600 mb-4">
+            Para superar as limitações, os processadores superescalares permitem
+            <span class="font-semibold"
+              >despachar múltiplas instruções por ciclo</span
+            >, desde que não haja dependências entre elas.
+          </p>
+
+          <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6">
+            <h4 class="font-bold text-lg mb-2 text-green-800">
+              Princípios Básicos
+            </h4>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>
+                <span class="font-semibold"
+                  >ILP (Parallelismo ao Nível de Instrução):</span
+                >
+                Explorar paralelismo entre instruções independentes, ou seja,
+                executar instruções independentes em paralelo.
+              </li>
+              <li>
+                <span class="font-semibold">Despacho em Ordem:</span> As
+                instruções são buscadas e decodificadas na ordem do programa,
+                mas podem ser executadas em paralelo.
+              </li>
+              <li>
+                <span class="font-semibold"
+                  >Múltiplas Unidades Funcionais:</span
+                >
+                Ex.: 2 ALUs, 1 FPU, 1 unidade de load/store.
+              </li>
+            </ul>
+          </div>
+
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3 text-gray-700">
+              Exemplo de Despacho Superescalar (2-way):
+            </h4>
+            <div class="code-block">
+              <span class="text-gray-400">Ciclo 1:</span>
+              <span class="text-blue-300">ADD R1, R2, R3</span> |
+              <span class="text-blue-300">SUB R4, R5, R6</span>
+              <span class="text-gray-500">; Instruções independentes.</span
+              ><br />
+              <span class="text-gray-400">Ciclo 2:</span>
+              <span class="text-blue-300">MUL R7, R1, R4</span> |
+              <span class="text-blue-300">LW R8, 0(R9)</span>
+              <span class="text-gray-500"
+                >; Dependência de R1 e R4 causa stall.</span
+              >
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3 text-gray-700">
+              Desafios do Superescalar In-Order
+            </h4>
+            <div class="space-y-3">
+              <div class="flex items-start">
+                <div class="bg-blue-100 p-2 rounded-full mr-3 mt-1">
+                  <i class="fas fa-search text-blue-600"></i>
+                </div>
+                <div>
+                  <h5 class="font-semibold text-gray-700">
+                    Detecção de Dependências
+                  </h5>
+                  <p class="text-gray-600">
+                    Inserção de um recurso de hardware adicional para verificar
+                    as dependências, isso deve ser feito de forma rápida e em
+                    tempo real.
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-purple-100 p-2 rounded-full mr-3 mt-1">
+                  <i class="fas fa-balance-scale text-purple-600"></i>
+                </div>
+                <div>
+                  <h5 class="font-semibold text-gray-700">
+                    Balanceamento de Recursos
+                  </h5>
+                  <p class="text-gray-600">
+                    Garantir que as unidades funcionais não fiquem
+                    sobrecarregadas, já que múltiplas instruções podem requerer
+                    a mesma unidade funcional.
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-red-100 p-2 rounded-full mr-3 mt-1">
+                  <i class="fas fa-pause-circle text-red-600"></i>
+                </div>
+                <div>
+                  <h5 class="font-semibold text-gray-700">
+                    Gerenciamento de Stalls
+                  </h5>
+                  <p class="text-gray-600">
+                    Mesmo com paralelismo, hazards ainda podem ocorrer o que
+                    dificulta o aproveitamento de ILP.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3 text-gray-700">
+              Exemplo: Pipeline superescalar 2-way com execução paralela de ADD
+              e SUB
+            </h4>
+            <div class="code-block">
+              <span class="text-gray-400">Ciclo 1:</span> IF1 | IF2 | ID1 | ID2
+              | EX1 | EX2 | MEM1 | MEM2 | WB1 | WB2
+            </div>
+          </div>
+
+          <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+            <h4 class="font-bold text-lg mb-2 text-yellow-800">
+              Limitações do Superescalar In-Order
+            </h4>
+            <p class="text-gray-700">
+              Mesmo com várias unidades funcionais, nem todas as instruções são
+              paralelizáveis:
+            </p>
+            <div class="code-block mt-2">
+              <span class="text-blue-300">1. R1 ← R2 + R3</span><br />
+              <span class="text-blue-300">2. R4 ← R1 + R5</span>
+              <span class="text-gray-500"
+                >; RAW → depende do resultado anterior</span
+              >
+            </div>
+            <p class="text-gray-700 mt-2">
+              A instrução 2 deve esperar a conclusão da instrução 1.
+            </p>
+          </div>
+
+          <h4 class="font-bold text-lg mb-3 text-gray-700">
+            Comparação: Pipeline Simples vs. Superescalar
+          </h4>
+          <div class="overflow-x-auto">
+            <table class="comparison-table">
+              <thead>
+                <tr>
+                  <th>Característica</th>
+                  <th>Pipeline Simples</th>
+                  <th>Superescalar In-Order</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Instruções por Ciclo</td>
+                  <td>1</td>
+                  <td>2–4</td>
+                </tr>
+                <tr>
+                  <td>Complexidade do Hardware</td>
+                  <td>Baixa</td>
+                  <td>Moderada</td>
+                </tr>
+                <tr>
+                  <td>Tratamento de Hazards</td>
+                  <td>Básico</td>
+                  <td>Dinâmico (scoreboard)</td>
+                </tr>
+                <tr>
+                  <td>Exemplos de Uso</td>
+                  <td>MIPS R2000</td>
+                  <td>Intel Pentium</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div class="p-6">
+          <div class="flex items-center mb-4">
+            <div class="bg-purple-100 p-3 rounded-full mr-4">
+              <i class="fas fa-chart-line text-purple-600 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800">
+              Método de Scoreboard e Prevenção de Stalls
+            </h3>
+          </div>
+
+          <p class="text-gray-600 mb-4">
+            Vimos que pipelines superescalares em-ordem aumentam o desempenho ao
+            despachar múltiplas instruções por ciclo. Porém, dependências entre
+            instruções ainda podem causar
+            <span class="font-semibold">stalls</span> (paradas), reduzindo o IPC
+            (Instruções por Ciclo). Agora, Vamos explorar o
+            <span class="font-semibold">Método de Scoreboard</span>, uma técnica
+            pioneira para gerenciar dependências dinamicamente, e estratégias
+            para prevenir stalls no despacho de instruções.
+          </p>
+
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3 text-gray-700">
+              Método de Scoreboard
+            </h4>
+            <p class="text-gray-600 mb-3">
+              Desenvolvido para processadores como o
+              <span class="font-semibold">CDC 6600</span>, o Scoreboard é um
+              mecanismo de controle centralizado que rastreia dependências e
+              gerencia a liberação de instruções para unidades funcionais e o
+              uso dos registradores.
+            </p>
+
+            <div class="bg-purple-50 border-l-4 border-purple-500 p-4 mb-4">
+              <h5 class="font-bold text-lg mb-2 text-purple-800">
+                Componentes do Scoreboard:
+              </h5>
+              <ol class="list-decimal pl-5 space-y-2">
+                <li>
+                  <span class="font-semibold"
+                    >Tabela de Status das Instruções:</span
+                  >
+                  Registra o estágio de cada instrução (e.g., despachada, em
+                  execução, concluída).
+                </li>
+                <li>
+                  <span class="font-semibold"
+                    >Tabela de Status dos Registradores:</span
+                  >
+                  Indica qual instrução escreverá em cada registrador.
+                </li>
+                <li>
+                  <span class="font-semibold"
+                    >Tabela de Unidades Funcionais:</span
+                  >
+                  Mostra quais unidades estão livres ou ocupadas.
+                </li>
+              </ol>
+            </div>
+
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+              <h5 class="font-bold text-lg mb-2 text-blue-800">
+                Funcionamento:
+              </h5>
+              <p class="text-gray-700 mb-2">
+                A instrução é despachada
+                <span class="font-semibold">somente</span> se a unidade estiver
+                livre e os registradores não estiverem reservados, caso
+                contrário, a execução aguarda até os operandos estarem
+                disponíveis.
+              </p>
+              <ol class="list-decimal pl-5 space-y-2">
+                <li>
+                  <span class="font-semibold">Despacho:</span> Uma instrução é
+                  despachada apenas se:
+                  <ul class="list-disc pl-5 mt-1">
+                    <li>A unidade funcional requerida está livre.</li>
+                    <li>
+                      Os registradores de destino não estão reservados por outra
+                      instrução.
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <span class="font-semibold">Execução:</span> A instrução só
+                  inicia quando seus operandos estão disponíveis.
+                </li>
+                <li>
+                  <span class="font-semibold">Escrita:</span> O resultado é
+                  gravado no registrador, liberando-o para outras instruções.
+                </li>
+              </ol>
+            </div>
+
+            <div class="mb-4">
+              <h5 class="font-bold text-lg mb-2 text-gray-700">Exemplo:</h5>
+              <div class="code-block mb-2">
+                <span class="text-blue-300">1. MUL F0, F1, F2</span>
+                <span class="text-gray-500">; Demora 4 ciclos</span><br />
+                <span class="text-blue-300">2. ADD F3, F0, F4</span>
+                <span class="text-gray-500">; Depende de F0</span><br />
+                <span class="text-blue-300">3. SUB F5, F6, F7</span>
+                <span class="text-gray-500">; Independente</span>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="comparison-table">
+                  <thead>
+                    <tr>
+                      <th>Ciclo</th>
+                      <th>Instrução</th>
+                      <th>Status</th>
+                      <th>Registradores Bloqueados</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>1</td>
+                      <td>MUL F0</td>
+                      <td>Em execução</td>
+                      <td>F0</td>
+                    </tr>
+                    <tr>
+                      <td>2</td>
+                      <td>ADD F3</td>
+                      <td>Aguardando F0</td>
+                      <td>F0, F3</td>
+                    </tr>
+                    <tr>
+                      <td>3</td>
+                      <td>SUB F5</td>
+                      <td>Em execução</td>
+                      <td>F5</td>
+                    </tr>
+                    <tr>
+                      <td>5</td>
+                      <td>MUL F0</td>
+                      <td>Concluída</td>
+                      <td>-</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3 text-gray-700">
+              Prevenção de Stalls no Despacho
+            </h4>
+            <p class="text-gray-600 mb-3">
+              Para minimizar paradas, duas técnicas são essenciais:
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5
+                  class="font-bold text-lg mb-2 text-green-700 flex items-center"
+                >
+                  <i class="fas fa-fast-forward mr-2"></i> Forwarding
+                  (Bypassing)
+                </h5>
+                <p class="text-gray-600 mb-2">
+                  Técnica que permite o envio dos resultados diretamente da ULA,
+                  sem esperar pelo WB.
+                </p>
+                <div class="bg-green-100 p-3 rounded">
+                  <p class="font-semibold text-green-800">Objetivo:</p>
+                  <p class="text-gray-700">
+                    Reduzir stalls por dependências RAW.
+                  </p>
+                  <p class="font-semibold text-green-800 mt-2">
+                    Funcionamento:
+                  </p>
+                  <p class="text-gray-700">
+                    O resultado de uma instrução é encaminhado diretamente para
+                    a próxima instrução, antes de ser gravado no registrador.
+                  </p>
+                </div>
+                <div class="code-block mt-3">
+                  <span class="text-blue-300">ADD R1, R2, R3</span><br />
+                  <span class="text-blue-300">SUB R4, R1, R5</span>
+                  <span class="text-gray-500"
+                    >; Recebe R1 diretamente da etapa EX de ADD, evitando
+                    stall.</span
+                  >
+                </div>
+              </div>
+
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5
+                  class="font-bold text-lg mb-2 text-blue-700 flex items-center"
+                >
+                  <i class="fas fa-sort-amount-down mr-2"></i> Buffer de
+                  Reordenação (ROB - Reorder Buffer)
+                </h5>
+                <p class="text-gray-600 mb-2">
+                  Técnica que mantém a ordem del programa visível, mesmo com
+                  execução fora de ordem.
+                </p>
+                <div class="bg-blue-100 p-3 rounded">
+                  <p class="font-semibold text-blue-800">Objetivo:</p>
+                  <p class="text-gray-700">
+                    Garantir que as instruções
+                    <span class="font-semibold">pareçam</span> ser executadas em
+                    ordem, mesmo com paralelismo.
+                  </p>
+                  <p class="font-semibold text-blue-800 mt-2">Funcionamento:</p>
+                  <ul class="list-disc pl-5 text-gray-700">
+                    <li>
+                      As instruções são despachadas em ordem, mas executadas
+                      fora de ordem.
+                    </li>
+                    <li>
+                      Os resultados são armazenados temporariamente no ROB e
+                      confirmados (commit) na ordem original.
+                    </li>
+                  </ul>
+                </div>
+                <div class="code-block mt-3">
+                  <span class="text-gray-400"
+                    >Fluxo em um pipeline superescalar:</span
+                  ><br />
+                  Despacho → Execução (fora de ordem) → Armazenamento no ROB →
+                  Commit (em ordem)
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <h4 class="font-bold text-lg mb-2 text-gray-700">Casos de uso:</h4>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>
+                <span class="font-semibold">CDC 6600:</span> Primeiro
+                processador a usar Scoreboard (1965).
+              </li>
+              <li>
+                <span class="font-semibold">MIPS R10000:</span> exemplo
+                clássico.
+              </li>
+              <li>
+                <span class="font-semibold">MIPS R8000:</span> Usava despacho
+                em-ordem com forwarding para evitar stalls.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div class="p-6">
+          <div class="flex items-center mb-4">
+            <div class="bg-indigo-100 p-3 rounded-full mr-4">
+              <i class="fas fa-random text-indigo-600 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800">
+              Execução Fora de Ordem (OoO) e Algoritmo de Tomasulo
+            </h3>
+          </div>
+
+          <p class="text-gray-600 mb-4">
+            A execução
+            <span class="font-semibold">fora de ordem (Out-of-Order, OoO)</span>
+            é uma técnica revolucionária que permite que processadores
+            superescalares explorem paralelismo mesmo em códigos com
+            dependências complexas. Exploraremos o
+            <span class="font-semibold">algoritmo de Tomasulo</span>, um método
+            dinâmico para gerenciar execução OoO, e como componentes como
+            <span class="font-semibold">estações de reserva</span> e
+            <span class="font-semibold">renomeação de registradores</span>
+            eliminam hazards e maximizam o ILP (<span class="font-semibold"
+              >Instruction-Level Parallelism</span
+            >).
+          </p>
+
+          <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-6">
+            <h4 class="font-bold text-lg mb-2 text-indigo-800">Motivação</h4>
+            <p class="text-gray-700">
+              Em pipelines superescalares
+              <span class="font-semibold">em-ordem</span>, instruções
+              dependentes geram stalls, limitando o IPC. A execução OoO resolve
+              isso permitindo que instruções
+              <span class="font-semibold">independentes</span> avancem enquanto
+              outras estão paradas. Os hazards
+              <span class="font-semibold">WAR (Write After Read)</span> e
+              <span class="font-semibold">WAW (Write After Write)</span> são
+              eliminados via renomeação de registradores.
+            </p>
+            <p class="text-gray-700 mt-2">
+              Neste exemplo, a instrução 3 é executada durante o stall da 2,
+              melhorando o IPC.
+            </p>
+            <div class="code-block mt-2">
+              <span class="text-blue-300">1. MUL R1, R2, R3</span>
+              <span class="text-gray-500">; Demora 4 ciclos</span><br />
+              <span class="text-blue-300">2. ADD R4, R1, R5</span>
+              <span class="text-gray-500">; Depende de R1 (RAW)</span><br />
+              <span class="text-blue-300">3. SUB R6, R7, R8</span>
+              <span class="text-gray-500"
+                >; Independente → Pode executar antes da ADD!</span
+              >
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3 text-gray-700">
+              Algoritmo de Tomasulo
+            </h4>
+            <p class="text-gray-600 mb-3">
+              Desenvolvido para o IBM 360/91 em 1967, o algoritmo de Tomasulo
+              gerencia a execução
+              <span class="font-semibold">out-of-order</span> (OoO) por meio de
+              três componentes-chave:
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div class="bg-blue-50 p-4 rounded-lg">
+                <h5 class="font-bold text-lg mb-2 text-blue-700">
+                  Estações de Reserva
+                </h5>
+                <p class="text-gray-600">
+                  São buffers distribuídos que armazenam as instruções enquanto
+                  aguardam a disponibilidade dos operandos ou das unidades
+                  funcionais.
+                </p>
+                <ul class="list-disc pl-5 mt-2 text-gray-600">
+                  <li>
+                    Cada estação contém:
+                    <ul class="list-disc pl-5">
+                      <li>Operação a ser executada.</li>
+                      <li>
+                        Valores dos operandos (se disponíveis) ou IDs das
+                        estações que os produzirão.
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="bg-purple-50 p-4 rounded-lg">
+                <h5 class="font-bold text-lg mb-2 text-purple-700">
+                  Renomeação de Registradores
+                </h5>
+                <p class="text-gray-600">
+                  Elimina os hazards <span class="font-semibold">WAR</span> e
+                  <span class="font-semibold">WAW</span> ao mapear registradores
+                  lógicos (ex.: R1) para registradores físicos temporários (ex.:
+                  T1).
+                </p>
+                <div class="code-block mt-2">
+                  <span class="text-blue-300">ADD R1, R2, R3</span>
+                  <span class="text-gray-500">→ Renomeia R1 para T1</span><br />
+                  <span class="text-blue-300">SUB R1, R4, R5</span>
+                  <span class="text-gray-500">→ Renomeia R1 para T2</span>
+                </div>
+              </div>
+
+              <div class="bg-green-50 p-4 rounded-lg">
+                <h5 class="font-bold text-lg mb-2 text-green-700">
+                  Barramento Comum de Dados (CDB)
+                </h5>
+                <p class="text-gray-600">
+                  Realiza a transmissão resultados concluídos para todas as
+                  estações de reserva, permitindo que operandos dependentes seja
+                  atualizados.
+                </p>
+              </div>
+            </div>
+
+            <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-4">
+              <h5 class="font-bold text-lg mb-2 text-indigo-800">
+                Funcionamento do Algoritmo de Tomasulo
+              </h5>
+              <p class="text-gray-700 mb-2">
+                O processo envolve três etapas principais:
+              </p>
+              <ol class="list-decimal pl-5 space-y-2">
+                <li>
+                  <span class="font-semibold">Passo 1: Despacho</span>
+                  <ul class="list-disc pl-5 mt-1">
+                    <li>
+                      A instrução é colocada em uma estação de reserva livre.
+                    </li>
+                    <li>
+                      Se os operandos estão prontos (em registradores ou no
+                      CDB), a instrução é marcada como
+                      <span class="font-semibold">pronta para execução</span>.
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <span class="font-semibold">Passo 2: Execução</span>
+                  <ul class="list-disc pl-5 mt-1">
+                    <li>
+                      Quando a unidade funcional está livre e os operandos estão
+                      disponíveis, a instrução é executada.
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <span class="font-semibold">Passo 3: Escrita</span>
+                  <ul class="list-disc pl-5 mt-1">
+                    <li>
+                      O resultado é enviado ao CDB e escrito no registrador
+                      físico renomeado.
+                    </li>
+                    <li>
+                      Todas as estações que dependem desse resultado são
+                      atualizadas.
+                    </li>
+                  </ul>
+                </li>
+              </ol>
+            </div>
+
+            <div class="mb-4">
+              <h5 class="font-bold text-lg mb-2 text-gray-700">
+                Exemplo de Fluxo:
+              </h5>
+              <div class="code-block mb-2">
+                <span class="text-blue-300">1. MUL T1, R2, R3</span>
+                <span class="text-gray-500">; Despachada → Estação de MULT</span
+                ><br />
+                <span class="text-blue-300">2. ADD T2, T1, R4</span>
+                <span class="text-gray-500">; Aguarda T1 → Estação de ADD</span
+                ><br />
+                <span class="text-blue-300">3. SUB T3, R5, R6</span>
+                <span class="text-gray-500"
+                  >; Pronta → Executa imediatamente</span
+                >
+              </div>
+              <div class="code-block">
+                <span class="text-gray-400"
+                  >Diagrama do algoritmo de Tomasulo com estações de reserva e
+                  CDB.</span
+                ><br />
+                [Estação de Reserva ADD] → Aguarda T1<br />
+                [Estação de Reserva MULT] → Executando MUL<br />
+                [CDB] → Transmite T1 após conclusão
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3 text-gray-700">
+              Janela de Instruções e Estações de Reserva
+            </h4>
+            <ul class="list-disc pl-5 space-y-2 text-gray-600">
+              <li>
+                <span class="font-semibold">Janela de Instruções:</span> Número
+                máximo de instruções que podem estar em execução simultânea
+                (ex.: 128 em processadores modernos).
+              </li>
+              <li>
+                <span class="font-semibold"
+                  >Tamanho das Estações de Reserva:</span
+                >
+                Define quantas instruções podem aguardar por recursos.
+                <ul class="list-disc pl-5 mt-1">
+                  <li>
+                    Mais estações → Maior capacidade de explorar ILP, mas maior
+                    complexidade.
+                  </li>
+                </ul>
+              </li>
+            </ul>
+
+            <h5 class="font-bold text-lg mt-4 mb-2 text-gray-700">
+              Impacto do tamanho da janela de instruções
+            </h5>
+            <div class="overflow-x-auto">
+              <table class="comparison-table">
+                <thead>
+                  <tr>
+                    <th>Tamanho da Janela</th>
+                    <th>Vantagem</th>
+                    <th>Desvantagem</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Pequeno (ex.: 32)</td>
+                    <td>Baixo consumo de energia</td>
+                    <td>Limita ILP</td>
+                  </tr>
+                  <tr>
+                    <td>Grande (ex.: 192)</td>
+                    <td>Maximiza paralelismo</td>
+                    <td>Alto custo em área e power</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3 text-gray-700">
+              Scoreboard vs. Tomasulo
+            </h4>
+            <div class="overflow-x-auto">
+              <table class="comparison-table">
+                <thead>
+                  <tr>
+                    <th>Característica</th>
+                    <th>Scoreboard</th>
+                    <th>Algoritmo de Tomasulo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Renomeação de Registradores</td>
+                    <td>Não</td>
+                    <td>Sim</td>
+                  </tr>
+                  <tr>
+                    <td>Evita RAW</td>
+                    <td>Sim</td>
+                    <td>Sim</td>
+                  </tr>
+                  <tr>
+                    <td>Evita WAR</td>
+                    <td>Não</td>
+                    <td>Sim</td>
+                  </tr>
+                  <tr>
+                    <td>Evita WAW</td>
+                    <td>Não</td>
+                    <td>Sim</td>
+                  </tr>
+                  <tr>
+                    <td>Complexidade</td>
+                    <td>Baixa/Moderada</td>
+                    <td>Alta</td>
+                  </tr>
+                  <tr>
+                    <td>Exemplo Histórico</td>
+                    <td>CDC 6600</td>
+                    <td>IBM 360/91</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div class="p-6">
+          <div class="flex items-center mb-4">
+            <div class="bg-pink-100 p-3 rounded-full mr-4">
+              <i class="fas fa-exclamation-circle text-pink-600 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800">
+              Exceções Precisas e Buffer de Reordenação (ROB)
+            </h3>
+          </div>
+
+          <p class="text-gray-600 mb-4">
+            Até o momento, exploramos como a execução
+            <span class="font-semibold">fora de ordem (OoO)</span> e o algoritmo
+            de Tomasulo maximizam o paralelismo ao nível de instrução (ILP).
+            Agora, consolidaremos esse conhecimento com um
+            <span class="font-semibold">exemplo completo de execução OoO</span>,
+            entenderemos como
+            <span class="font-semibold">exceções precisas</span> são garantidas
+            e analisaremos
+            <span class="font-semibold"
+              >microarquiteturas de processadores reais</span
+            >, como os da linha <span class="font-semibold">Intel Core</span>,
+            <span class="font-semibold">AMD Zen</span> e
+            <span class="font-semibold">Apple M2</span>.
+          </p>
+
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3 text-gray-700">
+              Exceções Precisas em Execução OoO
+            </h4>
+            <p class="text-gray-600 mb-3">
+              Em processadores com execução fora de ordem, as instruções podem
+              ser <span class="font-semibold">executadas</span> em qualquer
+              ordem, desde que seus operandos estejam disponíveis. No entanto,
+              <span class="font-semibold">exceções</span> (como divisão por zero
+              ou page fault) devem ser tratadas
+              <span class="font-semibold"
+                >como se a execução ocorresse em ordem</span
+              >, garantindo previsibilidade e correção no estado da máquina.
+            </p>
+
+            <div class="bg-pink-50 border-l-4 border-pink-500 p-4 mb-4">
+              <h5 class="font-bold text-lg mb-2 text-pink-800">
+                Funcionamento do ROB
+              </h5>
+              <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                <li>
+                  <span class="font-semibold">Armazenamento Temporário:</span>
+                  Os resultados das instruções são armazenados no
+                  <span class="font-semibold">ROB</span> e
+                  <span class="font-semibold"
+                    >não são aplicados diretamente</span
+                  >
+                  aos registradores ou à memória até que todas as instruções
+                  anteriores sejam concluídas com sucesso.
+                </li>
+                <li>
+                  <span class="font-semibold">Commit em Ordem:</span> As
+                  instruções confirmam (<span class="font-semibold"
+                    >commitam</span
+                  >) seus resultados na
+                  <span class="font-semibold">ordem original do programa</span>,
+                  independentemente da ordem em que foram executadas.
+                </li>
+                <li>
+                  <span class="font-semibold">Tratamento de Exceções:</span> Se
+                  uma exceção ocorre durante o
+                  <span class="font-semibold">commit</span> de uma instrução, o
+                  <span class="font-semibold">ROB</span>:
+                  <ul class="list-disc pl-5 mt-1">
+                    <li>
+                      <span class="font-semibold"
+                        >Interrompe o commit a partir da instrução com
+                        falha.</span
+                      >
+                    </li>
+                    <li>
+                      <span class="font-semibold"
+                        >Descarta os resultados de todas as instruções
+                        posteriores</span
+                      >, garantindo que o estado da máquina reflita a execução
+                      até exatamente o ponto da exceção.
+                    </li>
+                    <li>
+                      Isso preserva a
+                      <span class="font-semibold">exceção precisa</span>: é como
+                      se a execução tivesse ocorrido estritamente em ordem.
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+
+            <div class="mb-4">
+              <h5 class="font-bold text-lg mb-2 text-gray-700">Exemplo:</h5>
+              <div class="code-block mb-2">
+                <span class="text-blue-300">1. DIV R1, R2, R3</span>
+                <span class="text-gray-500">; Gera exceção (R3 = 0)</span><br />
+                <span class="text-blue-300">2. ADD R4, R5, R6</span>
+                <span class="text-gray-500"
+                  >; Executada antes, mas só é confirmada após a DIV</span
+                >
+              </div>
+
+              <div class="bg-gray-100 p-4 rounded-lg mb-2">
+                <h6 class="font-semibold text-gray-700">
+                  Antes do Commit (execução fora de ordem, ainda sem exceção
+                  detectada)
+                </h6>
+                <div class="code-block mt-2">
+                  <span class="text-gray-400"
+                    >+---------------------------+</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >|&nbsp&nbsp&nbsp&nbsp&nbsp&nbspReorder
+                    Buffer&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >+---------------------------+</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >|&nbsp&nbsp&nbsp&nbsp[1] DIV R1, R2,
+                    R3&nbsp&nbsp&nbsp&nbsp&nbsp|</span
+                  >
+                  <span class="text-gray-500"
+                    >← Causa exceção no commit (divisão por zero)</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >|&nbsp&nbsp&nbsp&nbsp[2] ADD R4, R5,
+                    R6&nbsp&nbsp&nbsp&nbsp&nbsp|</span
+                  >
+                  <span class="text-gray-500"
+                    >← Executada fora de ordem, aguardando commit</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >+---------------------------+</span
+                  ><br />
+                  <span class="text-gray-400">Legenda:</span><br />
+                  <span class="text-gray-400"
+                    >- Instruções executadas fora de ordem.</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >- Resultados ainda não foram aplicados ao estado da
+                    máquina.</span
+                  >
+                </div>
+              </div>
+
+              <div class="bg-red-100 p-4 rounded-lg">
+                <h6 class="font-semibold text-gray-700">
+                  Após Detecção da Exceção (commit da DIV falha)
+                </h6>
+                <div class="code-block mt-2">
+                  <span class="text-gray-400"
+                    >+---------------------------+</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >|&nbsp&nbsp&nbsp&nbsp&nbsp&nbspReorder
+                    Buffer&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >+---------------------------+</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >|&nbsp&nbsp&nbsp&nbsp[1] DIV R1, R2,
+                    R3&nbsp&nbsp&nbsp&nbsp&nbsp|</span
+                  >
+                  <span class="text-gray-500"
+                    >← Exceção detectada no commit!</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >|&nbsp&nbsp&nbsp&nbsp[2] ADD R4, R5,
+                    R6&nbsp&nbsp&nbsp&nbsp&nbsp|</span
+                  >
+                  <span class="text-gray-500">← Resultado descartado!</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >+---------------------------+</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp⬇</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >&nbsp&nbsp&nbsp&nbsp🚨 Exceção precisa</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp⬇</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >+---------------------------+</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >| Estado
+                    restaurado:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >| - Apenas
+                    instruções&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >| antes da DIV
+                    foram&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >|
+                    aplicadas&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >+---------------------------+</span
+                  ><br />
+                  <span class="text-gray-400">Legenda:</span><br />
+                  <span class="text-gray-400"
+                    >- A exceção interrompe o commit.</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >- Resultados de instruções posteriores são
+                    descartados.</span
+                  ><br />
+                  <span class="text-gray-400"
+                    >- O estado da CPU reflete execução até a instrução de
+                    exceção.</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4">
+              <h5 class="font-bold text-lg mb-2 text-blue-800">Observações:</h5>
+              <ul class="list-disc pl-5 space-y-1 text-gray-700">
+                <li>
+                  A instrução
+                  <code class="bg-blue-100 px-1 rounded">ADD</code> pode ser
+                  <span class="font-semibold"
+                    >executada antes da
+                    <code class="bg-blue-100 px-1 rounded">DIV</code></span
+                  >, mas
+                  <span class="font-semibold">não será comitada</span> até que a
+                  <code class="bg-blue-100 px-1 rounded">DIV</code> seja
+                  validada, sendo assim o
+                  <span class="font-semibold">commit</span> da instrução
+                  <code class="bg-blue-100 px-1 rounded">ADD</code> é bloqueado
+                  até que a exceção gerada pela instrução
+                  <code class="bg-blue-100 px-1 rounded">DIV</code> seja
+                  detectada e tratada.
+                </li>
+                <li>
+                  Quando a exceção da
+                  <code class="bg-blue-100 px-1 rounded">DIV</code> é detectada
+                  no momento do commit, o ROB:
+                  <ul class="list-disc pl-5 mt-1">
+                    <li>
+                      <span class="font-semibold"
+                        >Aborta o commit da
+                        <code class="bg-blue-100 px-1 rounded">DIV</code>.</span
+                      >
+                    </li>
+                    <li>
+                      <span class="font-semibold"
+                        >Descarta o resultado temporário da
+                        <code class="bg-blue-100 px-1 rounded">ADD</code>.</span
+                      >
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  O sistema então trata a exceção da
+                  <code class="bg-blue-100 px-1 rounded">DIV</code>, e o estado
+                  arquitetural permanece como se
+                  <span class="font-semibold"
+                    >apenas as instruções anteriores à
+                    <code class="bg-blue-100 px-1 rounded">DIV</code> tivessem
+                    sido executadas</span
+                  >.
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <h4 class="font-bold text-lg mb-3 text-gray-700">
+              Exemplo Completo: Simulação de um Pipeline OoO
+            </h4>
+            <p class="text-gray-600 mb-3">
+              Vamos simular um código em um processador OoO com
+              <span class="font-semibold">Tomasulo</span>,
+              <span class="font-semibold">estações de reserva</span> e
+              <span class="font-semibold">ROB</span>.
+            </p>
+
+            <div class="mb-4">
+              <h5 class="font-bold text-lg mb-2 text-gray-700">
+                Código de Exemplo:
+              </h5>
+              <div class="code-block">
+                <span class="text-blue-300">1. MUL T1, R2, R3</span>
+                <span class="text-gray-500">; 4 ciclos (Estação MULT)</span
+                ><br />
+                <span class="text-blue-300">2. ADD T2, T1, R4</span>
+                <span class="text-gray-500">; 2 ciclos (Estação ADD)</span
+                ><br />
+                <span class="text-blue-300">3. SUB T3, R5, R6</span>
+                <span class="text-gray-500">; 1 ciclo (Estação INT)</span><br />
+                <span class="text-blue-300">4. LW T4, 0(R7)</span>
+                <span class="text-gray-500">; 3 ciclos (Estação LOAD)</span>
+              </div>
+            </div>
+
+            <h5 class="font-bold text-lg mb-2 text-gray-700">
+              Passo a Passo (Ciclos 1-6):
+            </h5>
+            <div class="overflow-x-auto">
+              <table class="comparison-table">
+                <thead>
+                  <tr>
+                    <th>Ciclo</th>
+                    <th>Ação</th>
+                    <th>Estado das Estações de Reserva</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>
+                      Despacho: MUL T1 → Estação MULT. LW T4 → Estação LOAD.
+                    </td>
+                    <td>MULT: MUL T1 (aguarda R2, R3)</td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>
+                      SUB T3 é despachado → Estação INT (executa imediatamente).
+                    </td>
+                    <td>INT: SUB T3 (completa no ciclo 3)</td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td>SUB T3 escreve em T3 via CDB. ADD T2 aguarda T1.</td>
+                    <td>ADD: Aguarda T1</td>
+                  </tr>
+                  <tr>
+                    <td>5</td>
+                    <td>MUL T1 completa → CDB atualiza ADD T2.</td>
+                    <td>ADD: Executa T2 (ciclos 5-6)</td>
+                  </tr>
+                  <tr>
+                    <td>6</td>
+                    <td>LW T4 completa. ADD T2 escreve em T2.</td>
+                    <td>ROB: Commit em ordem (1, 2, 3, 4).</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h5 class="font-bold text-lg mt-4 mb-2 text-gray-700">
+              Estado final do ROB após 6 ciclos.
+            </h5>
+            <div class="overflow-x-auto">
+              <table class="comparison-table">
+                <thead>
+                  <tr>
+                    <th>Entrada</th>
+                    <th>Instrução</th>
+                    <th>Resultado</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>MUL T1</td>
+                    <td>Concluído</td>
+                    <td>Commit</td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>ADD T2</td>
+                    <td>Concluído</td>
+                    <td>Commit</td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td>SUB T3</td>
+                    <td>Concluído</td>
+                    <td>Commit</td>
+                  </tr>
+                  <tr>
+                    <td>4</td>
+                    <td>LW T4</td>
+                    <td>Concluído</td>
+                    <td>Commit</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div class="p-6">
+          <div class="flex items-center mb-4">
+            <div class="bg-blue-100 p-3 rounded-full mr-4">
+              <i class="fas fa-microchip text-blue-600 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800">
+              Arquitetura de Processadores Reais com Suporte a Execução Fora de
+              Ordem
+            </h3>
+          </div>
+
+          <div class="bg-gray-50 p-4 rounded-lg mb-4">
+            <h5 class="font-bold text-lg mb-2 text-gray-700">
+              Relação com Microarquiteturas Reais
+            </h5>
+            <p class="text-gray-600">
+              Arquiteturas modernas como
+              <span class="font-semibold">Intel Core</span>,
+              <span class="font-semibold">AMD Zen</span> e
+              <span class="font-semibold">Apple M2</span> utilizam de
+              <span class="font-semibold">Reorder Buffers (ROBs)</span> para
+              garantir <span class="font-semibold">exceções precisas</span>,
+              mesmo em cenários com execução fora de ordem e múltiplas unidades
+              funcionais operando em paralelo.
+            </p>
+            <p class="text-gray-600 mt-2">
+              O <span class="font-semibold">ROB</span>, em conjunto com
+              mecanismos como
+              <span class="font-semibold">reservation stations</span>,
+              <span class="font-semibold">register renaming</span> e múltiplas
+              unidades funcionais paralelas,
+              <span class="font-semibold">forma a base</span> para uma execução
+              de instruções <span class="font-semibold">segura</span> e
+              <span class="font-semibold">eficiente</span>, com foco na
+              maximização do
+              <span class="font-semibold"
+                >paralelismo ao nível de instrução (ILP)</span
+              >. Essas escolhas microarquiteturais impactam diretamente o
+              <span class="font-semibold">desempenho</span>, a
+              <span class="font-semibold">eficiência energética</span> e a
+              <span class="font-semibold"
+                >robustez no tratamento de exceções</span
+              >, mantendo o suporte a exceções precisas em processadores
+              modernos.
+            </p>
+          </div>
+
+          <h5 class="font-bold text-lg mb-2 text-gray-700">
+            Comparativo entre Arquiteturas Reais
+          </h5>
+          <p class="text-gray-600 mb-3">
+            Vamos comparar essas arquiteturas para destacar como diferentes
+            escolhas microarquiteturais afetam a execução fora de ordem e o
+            tratamento das exceções.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <h6 class="font-bold text-lg mb-2 text-blue-700">
+                Intel Core (Sunny Cove)
+              </h6>
+              <ul class="list-disc pl-5 space-y-1 text-gray-600">
+                <li>
+                  <span class="font-semibold">Janela de Instruções:</span> Até
+                  224 entradas.
+                </li>
+                <li><span class="font-semibold">ROB:</span> 512 entradas.</li>
+                <li>
+                  <span class="font-semibold">Unidades Funcionais:</span> 4
+                  ALUs, 3 FPUs, 2 unidades de load/store.
+                </li>
+                <li>
+                  <span class="font-semibold">Tecnologias Aplicadas:</span>
+                  <ul class="list-disc pl-5 mt-1">
+                    <li>
+                      <span class="font-semibold">Hyper-Threading:</span>
+                      Executa 2 threads por núcleo (SMT).
+                    </li>
+                    <li>
+                      <span class="font-semibold">Prefetching Avançado:</span>
+                      Reduz stalls de cache.
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+
+            <div class="bg-purple-50 p-4 rounded-lg">
+              <h6 class="font-bold text-lg mb-2 text-purple-700">AMD Zen 4</h6>
+              <ul class="list-disc pl-5 space-y-1 text-gray-600">
+                <li>
+                  <span class="font-semibold">Janela de Instruções:</span> 192
+                  entradas.
+                </li>
+                <li><span class="font-semibold">ROB:</span> 256 entradas.</li>
+                <li>
+                  <span class="font-semibold">Unidades Funcionais:</span> 6
+                  ALUs, 4 FPUs, 3 unidades de load/store.
+                </li>
+                <li>
+                  <span class="font-semibold">Tecnologias Aplicadas:</span>
+                  <ul class="list-disc pl-5 mt-1">
+                    <li>
+                      <span class="font-semibold"
+                        >SMT (Simultaneous Multithreading):</span
+                      >
+                      Similar ao Hyper-Threading.
+                    </li>
+                    <li>
+                      <span class="font-semibold">Infinity Fabric:</span>
+                      Comunicação rápida entre núcleos.
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+
+            <div class="bg-green-50 p-4 rounded-lg">
+              <h6 class="font-bold text-lg mb-2 text-green-700">
+                Apple M2 (ARM)
+              </h6>
+              <ul class="list-disc pl-5 space-y-1 text-gray-600">
+                <li>
+                  <span class="font-semibold">Execução OoO Agressiva:</span>
+                  8-wide superescalar.
+                </li>
+                <li>
+                  <span class="font-semibold">Unidades Especializadas:</span>
+                  Neural Engine para IA.
+                </li>
+                <li>
+                  <span class="font-semibold">Vantagem:</span> Eficiência
+                  energética alta com elevado paralelismo (ILP).
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <h5 class="font-bold text-lg mb-2 text-gray-700">
+            Comparação Intel vs. AMD
+          </h5>
+          <div class="overflow-x-auto">
+            <table class="comparison-table">
+              <thead>
+                <tr>
+                  <th>Característica</th>
+                  <th>Intel Core (Sunny Cove)</th>
+                  <th>AMD Zen 4</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Janela de Instruções</td>
+                  <td>224</td>
+                  <td>192</td>
+                </tr>
+                <tr>
+                  <td>Tamanho do ROB</td>
+                  <td>512</td>
+                  <td>256</td>
+                </tr>
+                <tr>
+                  <td>Consumo de Energia</td>
+                  <td>Alto</td>
+                  <td>Moderado</td>
+                </tr>
+                <tr>
+                  <td>Aplicação Ideal</td>
+                  <td>Desktop/Server</td>
+                  <td>Desktop/Gaming</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-4">
+            <h5 class="font-bold text-lg mb-2 text-yellow-800">
+              Impacto na Escolha da Microarquitetura
+            </h5>
+            <ul class="list-disc pl-5 space-y-1 text-gray-700">
+              <li>
+                <span class="font-semibold">Jogos e aplicações gráficas:</span>
+                Beneficiam-se de grandes janelas de instrução e múltiplas FPUs
+                (ex.: AMD Zen 4).
+              </li>
+              <li>
+                <span class="font-semibold"
+                  >Servidores e multitarefa pesada:</span
+                >
+                Priorizam um SMT robusto e ROBs maiores para multitarefa (ex.:
+                Intel Xeon).
+              </li>
+              <li>
+                <span class="font-semibold">Dispositivos móveis e IA:</span>
+                Priorizam a alta eficiência energética e unidades especializadas
+                (ex.: Apple M2 com Neural Engine).
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </main>
+    <!-- Back to top button -->
+    <button
+      id="backToTop"
+      class="fixed bottom-6 right-6 bg-blue-600 text-white px-4 py-3 rounded-full shadow-lg hidden"
+    >
+      <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script>
+      // Back to top button
+      const backToTopButton = document.getElementById("backToTop");
+
+      window.addEventListener("scroll", () => {
+        if (window.pageYOffset > 300) {
+          backToTopButton.classList.remove("hidden");
+        } else {
+          backToTopButton.classList.add("hidden");
+        }
+      });
+
+      backToTopButton.addEventListener("click", () => {
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      });
+
+      // Redireciona para index.html ao clicar no cabeçalho azul
+      document.getElementById("goHome").addEventListener("click", function () {
+        window.location.href = "index.html";
+      });
+    </script>
+  </body>
+</html>

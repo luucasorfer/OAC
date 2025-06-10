@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Memórias Cache</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      .memory-hierarchy {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 2rem 0;
+      }
+      .memory-level {
+        width: 100%;
+        padding: 1rem;
+        text-align: center;
+        border-radius: 0.5rem;
+        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+      }
+      .memory-level:hover {
+        transform: scale(1.02);
+      }
+      .diagram-arrow {
+        width: 0;
+        height: 0;
+        border-left: 15px solid transparent;
+        border-right: 15px solid transparent;
+        margin: -5px 0;
+      }
+      .cache-line {
+        border: 1px solid #ddd;
+        border-bottom: 0;
+        margin-bottom: 1px;
+      }
+      .cache-line-part {
+        padding: 0.5rem;
+        text-align: center;
+        border-bottom: 1px solid #ddd;
+      }
+      .hljs {
+        display: block;
+        overflow-x: auto;
+        padding: 0.5em;
+        background: #f0f0f0;
+      }
+      .graph-container {
+        height: 100%;
+        width: 100%;
+        margin: 1rem 0;
+      }
+      #cacheDemo {
+        border: 1px solid #ddd;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        background-color: #f9f9f9;
+      }
+      .access-animation {
+        animation: accessAnimation 1s;
+      }
+      @keyframes accessAnimation {
+        0% {
+          background-color: yellow;
+        }
+        100% {
+          background-color: transparent;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 font-sans">
+    <!-- Header -->
+    <header
+      class="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-12 px-4 sm:px-6 lg:px-8"
+    >
+      <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-center">
+          <div class="mb-6 md:mb-0">
+            <h1 class="text-3xl md:text-4xl font-bold">Memórias Cache</h1>
+            <h2 class="text-2xl font-semibold">
+              Hierarquia de memória e princípios de localidade
+            </h2>
+          </div>
+          <div class="flex space-x-4">
+            <div
+              id="goHome"
+              class="flex justify-center items-center gap-4 bg-blue-700 p-4 rounded-lg shadow-md cursor-pointer hover:bg-blue-800 transition-colors duration-300"
+            >
+              <i class="fas fa-microchip text-3xl"></i>
+              <p class="font-medium">Arquitetura de Computadores</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto max-w-6xl px-4 py-12">
+      <!-- Introduction Memory Section -->
+      <section class="mb-16">
+        <div class="bg-white rounded-xl shadow-lg p-8">
+          <h2
+            class="text-3xl font-bold text-gray-800 mb-6 flex items-center border-b pb-2"
+          >
+            <i class="fas fa-memory text-blue-500 mr-4"></i>
+            O que são Memórias?
+          </h2>
+          <div class="prose max-w-none text-gray-700">
+            <p class="mb-4">
+              Memória, em computação, é qualquer dispositivo capaz de armazenar
+              dados e instruções que serão utilizados durante o processamento. É
+              por meio da memória que o processador pode guardar informações
+              temporárias ou permanentes para realizar suas operações.
+            </p>
+            <p class="mb-4">
+              As memórias são classificadas de acordo com características como:
+            </p>
+            <ul class="list-disc pl-6 space-y-2">
+              <li>
+                <span class="font-bold">Volatilidade</span> (se os dados
+                permanecem após desligar o sistema)
+              </li>
+              <li>
+                <span class="font-bold">Tempo de acesso</span> (o quão rápido os
+                dados podem ser lidos ou escritos)
+              </li>
+              <li>
+                <span class="font-bold">Capacidade</span> (quanto de informação
+                pode ser armazenada)
+              </li>
+              <li>
+                <span class="font-bold">Custo</span> (preço por unitário de
+                armazenamento)
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Types of Memory Section -->
+      <section class="mb-16">
+        <div class="bg-white rounded-xl shadow-lg p-8">
+          <h2 class="text-2xl font-bold mb-4 text-indigo-700 border-b pb-2">
+            <i class="fas fa-hdd mr-2"></i> Tipos de Memória
+          </h2>
+          <p class="mb-4">
+            As memórias são divididas em duas categorias principais:
+            <strong>volátil</strong> e <strong>não volátil</strong>. Cada tipo
+            tem suas características e usos específicos.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Volatile Memory Card -->
+            <div
+              class="bg-white rounded-lg shadow-md p-6 border border-red-200"
+            >
+              <div class="flex items-center mb-3">
+                <i class="fas fa-bolt text-red-500 text-xl mr-2"></i>
+                <h3 class="text-lg font-semibold text-red-700">
+                  Memória Volátil
+                </h3>
+              </div>
+              <p class="mb-3 text-sm">
+                Perde os dados quando a energia é desligada. Usada para
+                armazenar informações temporárias.
+              </p>
+              <ul class="text-sm space-y-1">
+                <li class="flex items-start">
+                  <i
+                    class="fas fa-microchip text-red-400 text-xs mt-1 mr-2"
+                  ></i>
+                  <span
+                    ><strong>RAM (Random Access Memory)</strong>: usada como
+                    memória principal.</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <i
+                    class="fas fa-tachometer-alt text-red-400 text-xs mt-1 mr-2"
+                  ></i>
+                  <span
+                    ><strong>Cache</strong>: usada entre a RAM e o processador
+                    para acelerar o acesso.</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <i
+                    class="fas fa-microchip text-red-400 text-xs mt-1 mr-2"
+                  ></i>
+                  <span
+                    ><strong>Registradores</strong>: internos ao processador,
+                    muito rápidos e pequenos.</span
+                  >
+                </li>
+              </ul>
+            </div>
+
+            <!-- Non-Volatile Memory Card -->
+            <div
+              class="bg-white rounded-lg shadow-md p-6 border border-blue-200"
+            >
+              <div class="flex items-center mb-3">
+                <i class="fas fa-database text-blue-500 text-xl mr-2"></i>
+                <h3 class="text-lg font-semibold text-blue-700">
+                  Memória Não Volátil
+                </h3>
+              </div>
+              <p class="mb-3 text-sm">
+                Mantém os dados mesmo sem energia elétrica.
+              </p>
+              <ul class="text-sm space-y-1">
+                <li class="flex items-start">
+                  <i
+                    class="fas fa-compact-disc text-blue-400 text-xs mt-1 mr-2"
+                  ></i>
+                  <span
+                    ><strong>ROM (Read Only Memory)</strong>: contém informações
+                    fixas, como firmware.</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-sd-card text-blue-400 text-xs mt-1 mr-2"></i>
+                  <span
+                    ><strong>Flash (SSD)</strong>: memória regravável usada em
+                    armazenamento moderno.</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-hdd text-blue-400 text-xs mt-1 mr-2"></i>
+                  <span
+                    ><strong>Disco Rígido (HD)</strong>: tradicional, com partes
+                    mecânicas e maior capacidade.</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-tape text-blue-400 text-xs mt-1 mr-2"></i>
+                  <span
+                    ><strong>Fita Magnética</strong>: usada para backup e
+                    arquivamento de longo prazo.</span
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div
+            class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded my--4"
+          >
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <i class="fas fa-lightbulb text-yellow-500"></i>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-yellow-700">
+                  <strong>A memória ideal</strong> teria a velocidade da SRAM
+                  com a capacidade de um HD.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Memory Wall section -->
+      <section class="mb-16">
+        <div class="bg-white rounded-xl shadow-lg p-8">
+          <h2 class="text-2xl font-bold mb-4 text-indigo-700 border-b pb-2">
+            <i class="fas fa-arrow-trend-up text-indigo-600 mr-2"></i>
+            Tendencias tecnológicas
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="flex flex-col justify-between p-4">
+              <p class="mb-4">
+                No mundo da computação, processadores e memórias são componentes
+                cruciais que trabalham juntos para executar programas. Contudo,
+                ao longo dos anos, uma disparidade de desempenho surgiu entre
+                eles.
+              </p>
+
+              <div class="space-y-4">
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 pt-1">
+                    <div
+                      class="flex items-center justify-center h-6 w-6 rounded-full bg-green-100 text-green-800"
+                    >
+                      <i class="fas fa-microchip text-xs"></i>
+                    </div>
+                  </div>
+                  <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-900">
+                      Processadores em Alta Velocidade
+                    </p>
+                    <p class="text-sm text-gray-500">
+                      O desempenho dos processadores tem dobrado aproximadamente
+                      a cada 1.8 anos, uma tendência similar à Lei de Moore (que
+                      trata do número de transistores, não diretamente do
+                      desempenho).
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 pt-1">
+                    <div
+                      class="flex items-center justify-center h-6 w-6 rounded-full bg-red-100 text-red-800"
+                    >
+                      <i class="fas fa-memory text-xs"></i>
+                    </div>
+                  </div>
+                  <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-900">
+                      Memória Principal (DRAM) Lenta
+                    </p>
+                    <p class="text-sm text-gray-500">
+                      Em contrapartida, a latência da memória principal (DRAM)
+                      melhorou muito pouco, cerca de 30% em 18 anos, não
+                      chegando nem a dobrar neste período.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow">
+              <h3 class="font-semibold mb-2 text-indigo-600 flex items-center">
+                <i class="fas fa-chart-line mr-2"></i> Performance Gap
+              </h3>
+              <div class="graph-container">
+                <canvas id="performanceChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <p class="mt-4">
+            Isso significa que o processador, que é muito rápido, frequentemente
+            precisa esperar pela memória mais lenta, causando um grande vão de
+            desempenho (<strong>GAP</strong>). Para "aliviar" essa diferença,
+            foi criada a
+            <strong>hierarquia de memória</strong>.
+          </p>
+        </div>
+      </section>
+
+      <!-- Memory Hierarchy section -->
+      <section class="mb-16">
+        <div class="bg-white rounded-xl shadow-lg p-8">
+          <h2 class="text-2xl font-bold mb-4 text-indigo-700 border-b pb-2">
+            <i class="fas fa-sitemap mr-2"></i> A Hierarquia de Memória
+          </h2>
+
+          <p class="mb-4">
+            A hierarquia de memória é uma estrutura que organiza diferentes
+            tipos de memória em níveis, cada um com características específicas
+            de velocidade, capacidade e custo. O objetivo é otimizar o
+            desempenho do sistema, minimizando o tempo de acesso aos dados mais
+            frequentemente utilizados.
+          </p>
+
+          <div class="memory-hierarchy">
+            <!-- Secondary Storage -->
+            <div
+              class="memory-level bg-blue-100 border border-blue-300 text-blue-800"
+              onclick="showLevelInfo('secondary')"
+            >
+              <div class="font-bold">
+                <i class="fas fa-database mr-2"></i> Armazenamento Secundário
+                (HD/SSD - TBs)
+              </div>
+              <div class="text-sm">Mais lento, maior, mais barato</div>
+            </div>
+            <div class="diagram-arrow border-t-blue-300"></div>
+
+            <!-- Main Memory -->
+            <div
+              class="memory-level bg-indigo-100 border border-indigo-300 text-indigo-800"
+              onclick="showLevelInfo('main')"
+            >
+              <div class="font-bold">
+                <i class="fas fa-memory mr-2"></i> Memória Principal (DRAM -
+                GBs)
+              </div>
+              <div class="text-sm">Lento, grande capacidade, custo médio</div>
+            </div>
+            <div class="diagram-arrow border-t-indigo-300"></div>
+
+            <!-- L3 Cache -->
+            <div
+              class="memory-level bg-purple-100 border border-purple-300 text-purple-800"
+              onclick="showLevelInfo('l3')"
+            >
+              <div class="font-bold">
+                <i class="fas fa-tachometer-alt mr-2"></i> Cache L3 (MBs)
+              </div>
+              <div class="text-sm">
+                Mais lento entre as caches, mas ainda rápido
+              </div>
+            </div>
+            <div class="diagram-arrow border-t-purple-300"></div>
+
+            <!-- L2 Cache -->
+            <div
+              class="memory-level bg-pink-100 border border-pink-300 text-pink-800"
+              onclick="showLevelInfo('l2')"
+            >
+              <div class="font-bold">
+                <i class="fas fa-tachometer-alt mr-2"></i> Cache L2 (KBs)
+              </div>
+              <div class="text-sm">Intermediária em velocidade e tamanho</div>
+            </div>
+            <div class="diagram-arrow border-t-pink-300"></div>
+
+            <!-- L1 Cache -->
+            <div
+              class="memory-level bg-red-100 border border-red-300 text-red-800"
+              onclick="showLevelInfo('l1')"
+            >
+              <div class="font-bold">
+                <i class="fas fa-bolt mr-2"></i> Cache L1 (KBs)
+              </div>
+              <div class="text-sm">Muito rápida, pequena e cara</div>
+            </div>
+            <div class="diagram-arrow border-t-red-300"></div>
+
+            <!-- CPU Registers -->
+            <div
+              class="memory-level bg-green-100 border border-green-300 text-green-800"
+              onclick="showLevelInfo('registers')"
+            >
+              <div class="font-bold">
+                <i class="fas fa-microchip mr-2"></i> Registradores CPU (Bytes)
+              </div>
+              <div class="text-sm">Mais rápidos, menor capacidade</div>
+            </div>
+          </div>
+
+          <!-- Level Info Modal (hidden by default) -->
+          <div
+            id="levelInfoModal"
+            class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden"
+          >
+            <div
+              class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
+            >
+              <div class="mt-3 text-center">
+                <h3
+                  id="modalTitle"
+                  class="text-lg leading-6 font-medium text-gray-900"
+                ></h3>
+                <div class="mt-2 px-7 py-3">
+                  <p id="modalContent" class="text-sm text-gray-500"></p>
+                </div>
+                <div class="items-center px-4 py-3">
+                  <button
+                    onclick="hideLevelInfo()"
+                    class="px-4 py-2 bg-indigo-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white p-4 rounded-lg shadow">
+              <div class="flex items-center mb-2">
+                <div
+                  class="px-3 py-2 rounded-full bg-indigo-100 text-indigo-700 mr-3"
+                >
+                  <i class="fas fa-stopwatch"></i>
+                </div>
+                <h3 class="font-semibold">Tempo de Acesso</h3>
+              </div>
+              <p class="text-sm text-gray-600">
+                Cada nível superior é 5-10x mais rápido que o nível abaixo,
+                reduzindo o tempo de espera do processador.
+              </p>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow">
+              <div class="flex items-center mb-2">
+                <div class="p-3 rounded-full bg-green-100 text-green-700 mr-3">
+                  <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <h3 class="font-semibold">Custo</h3>
+              </div>
+              <p class="text-sm text-gray-600">
+                Memórias mais rápidas são mais caras por byte armazenado. A
+                hierarquia otimiza o custo-benefício.
+              </p>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow">
+              <div class="flex items-center mb-2">
+                <div
+                  class="px-4 py-2 rounded-full bg-blue-100 text-blue-700 mr-3"
+                >
+                  <i class="fas fa-arrows-alt-v"></i>
+                </div>
+                <h3 class="font-semibold">Capacidade</h3>
+              </div>
+              <p class="text-sm text-gray-600">
+                Quanto mais alto na hierarquia, menor a capacidade. Cache L1
+                pode ter apenas alguns KBs, enquanto HDs armazenam TBs.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Internal Organization of Cache section -->
+      <section class="mb-16">
+        <div class="bg-white rounded-xl shadow-lg p-8">
+          <h2 class="text-2xl font-bold mb-4 text-indigo-700 border-b pb-2">
+            <i class="fas fa-sitemap mr-2"></i> Organização Interna da Cache
+          </h2>
+
+          <p class="mb-4">
+            A memória cache é organizada em linhas, onde cada linha contém
+            informações sobre a validade dos dados, a tag (etiqueta) e o bloco
+            de dados. Essa estrutura permite que a cache armazene e recupere
+            dados de forma eficiente.
+          </p>
+
+          <p class="mb-4">
+            Cada linha na cache (<strong>Bloco de dados</strong>) armazena um
+            pedaço da memória principal e usa a <strong>Tag</strong> para
+            verificar se o dado procurado está ali. O
+            <strong>bit de validade</strong> indica se o conteúdo é confiável.
+          </p>
+
+          <p class="mb-4">
+            De forma simples, podemos definir a estrutura interna da seguinte
+            forma:
+          </p>
+
+          <div class="overflow-x-auto">
+            <div class="inline-block min-w-full overflow-hidden">
+              <table class="min-w-full leading-normal">
+                <tbody>
+                  <tr>
+                    <td
+                      class="px-5 py-3 border-b border-gray-200 bg-white text-sm"
+                    >
+                      <div class="flex items-center">
+                        <div
+                          class="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center"
+                        >
+                          <i class="fas fa-check-circle text-red-500"></i>
+                        </div>
+                        <div class="ml-3">
+                          <p class="font-medium">Bit de Validade</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td
+                      class="px-5 py-3 border-b border-gray-200 bg-white text-sm"
+                    >
+                      <p>
+                        1 bit que indica se os dados são válidos ou não. Quando
+                        a cache é ligada, todas as linhas são inválidas.
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      class="px-5 py-3 border-b border-gray-200 bg-white text-sm"
+                    >
+                      <div class="flex items-center">
+                        <div
+                          class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center"
+                        >
+                          <i class="fas fa-tag text-blue-500"></i>
+                        </div>
+                        <div class="ml-3">
+                          <p class="font-medium">Tag (Etiqueta)</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td
+                      class="px-5 py-3 border-b border-gray-200 bg-white text-sm"
+                    >
+                      <p>
+                        Parte do endereço que identifica os dados, permitindo
+                        que a cache verifique se o dado armazenado é realmente
+                        aquele que está sendo procurado.
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-5 py-3 bg-white text-sm">
+                      <div class="flex items-center">
+                        <div
+                          class="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"
+                        >
+                          <i class="fas fa-database text-green-500"></i>
+                        </div>
+                        <div class="ml-3">
+                          <p class="font-medium">Bloco de Dados</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-5 py-3 bg-white text-sm">
+                      <p>
+                        Contém os bytes dos dados armazenados, que foram
+                        trazidos da memória principal. O tamanho do bloco é
+                        fixo.
+                      </p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div
+            class="mt-4 text-sm bg-yellow-50 p-4 rounded border border-yellow-200"
+          >
+            <h4 class="font-semibold mb-2 text-yellow-700 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i> Exemplo de Linha de Cache
+            </h4>
+            <div class="cache-line grid grid-cols-6">
+              <div class="cache-line-part bg-red-100 text-red-800 col-span-1">
+                Validade
+              </div>
+              <div class="cache-line-part bg-blue-100 text-blue-800 col-span-2">
+                Tag
+              </div>
+              <div
+                class="cache-line-part bg-green-100 text-green-800 col-span-3"
+              >
+                Bloco de Dados
+              </div>
+              <div class="cache-line-part bg-red-100 text-red-800 col-span-1">
+                1 bit
+              </div>
+              <div class="cache-line-part bg-blue-100 text-blue-800 col-span-2">
+                20 bits
+              </div>
+              <div
+                class="cache-line-part bg-green-100 text-green-800 col-span-3"
+              >
+                64 bytes
+              </div>
+            </div>
+            <p class="mt-2 text-xs">
+              * Tamanhos variam de acordo com a implementação da cache
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Memory Mapping section -->
+      <section id="mapping" class="mb-16">
+        <div class="bg-white rounded-xl shadow-lg p-8">
+          <h2 class="text-2xl font-bold mb-4 text-indigo-700 border-b pb-2">
+            <i class="fas fa-map-marked-alt mr-2"></i> Tipos de Mapeamento de
+            Cache
+          </h2>
+
+          <p class="mb-4">
+            Existem três principais tipos de mapeamento de cache, cada um com
+            suas vantagens e desvantagens. Eles determinam como os dados da
+            memória principal são armazenados na cache.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <!-- Direct Mapped -->
+            <div
+              class="bg-white rounded-lg shadow-md overflow-hidden border border-blue-200"
+            >
+              <div
+                class="flex items-center justify-center bg-blue-100 p-4 border-b border-blue-200"
+              >
+                <div class="bg-blue-100 p-3 rounded-full">
+                  <i class="fas fa-map-pin text-blue-500 text-xl"></i>
+                </div>
+                <h3 class="font-bold text-blue-800 text-center">
+                  Mapeamento Direto<br />(Direct-Mapped Cache)
+                </h3>
+              </div>
+              <div class="px-4 mt-2">
+                <p>
+                  O mapeamento direto é o método mais simples de cache, onde
+                  cada bloco da memória principal é mapeado para uma linha
+                  específica na cache. Isso significa que cada endereço de
+                  memória pode ser armazenado em apenas uma linha da cache.
+                </p>
+
+                <p class="mt-2">
+                  Sua estrutura consiste em dividir o endereço de memória em
+                  três partes:
+                </p>
+                <ul class="text-sm space-y-2 mt-6 mb-3">
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                    <span>
+                      <strong>Offset (Deslocamento):</strong> especifica o byte
+                      dentro do bloco</span
+                    >
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                    <span
+                      ><strong>Index (Índice):</strong> determina a linha
+                      específica da cache, cada endereço de memória principal só
+                      pode ser armazenado em UMA posição específica na
+                      cache</span
+                    >
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                    <span
+                      ><strong>Tag (Etiqueta):</strong> identifica o bloco de
+                      dados</span
+                    >
+                  </li>
+                </ul>
+              </div>
+
+              <div class="px-4 mt-7">
+                <p class="font-semibold mb-2 border-t pt-2">
+                  Vantagens/Desvantagens:
+                </p>
+                <ul class="text-sm space-y-2 mb-4">
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                    <span>Implementação simples com apenas 1 comparador</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i
+                      class="fas fa-exclamation-circle text-red-500 mr-2 mt-1"
+                    ></i>
+                    <span>Cada bloco só pode ir para uma linha específica</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-chart-line text-yellow-500 mr-2 mt-1"></i>
+                    <span>Alta taxa de conflitos de dados</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Fully Associative -->
+            <div
+              class="bg-white rounded-lg shadow-md overflow-hidden border border-purple-200"
+            >
+              <div
+                class="flex items-center justify-center bg-purple-100 p-4 border-b border-purple-200"
+              >
+                <div class="bg-purple-100 p-3 rounded-full">
+                  <i class="fas fa-arrows-alt text-purple-500 text-xl"></i>
+                </div>
+                <h3 class="font-bold text-purple-800 text-center">
+                  Totalmente Associativo<br />(Fully Associative Cache)
+                </h3>
+              </div>
+              <div class="px-4 mt-2">
+                <p>
+                  No mapeamento totalmente associativo, qualquer bloco da
+                  memória principal pode ser armazenado em qualquer linha da
+                  cache. Isso oferece flexibilidade máxima, mas também exige
+                  mais recursos.
+                </p>
+
+                <p>
+                  A estrutura é semelhante ao mapeamento direto, mas sem o
+                  índice fixo. O endereço de memória é dividido em:
+                </p>
+
+                <ul class="text-sm space-y-2 mt-14 mb-4">
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                    <span>
+                      <strong>Offset (Deslocamento):</strong> especifica o byte
+                      dentro do bloco</span
+                    >
+                  </li>
+                  <li class="flex items-center">
+                    <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                    <span
+                      ><strong>Tag (Etiqueta):</strong> identifica o bloco de
+                      dados, mas não há índice fixo</span
+                    >
+                  </li>
+                </ul>
+              </div>
+
+              <div class="px-4 mt-24">
+                <p class="font-semibold mt-27 mb-2 border-t pt-2">
+                  Vantagens/Desvantagens:
+                </p>
+                <ul class="text-sm space-y-7 mb-4">
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                    <span>Qualquer bloco pode ir para qualquer linha</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i
+                      class="fas fa-exclamation-circle text-red-500 mr-2 mt-1"
+                    ></i>
+                    <span>Exige comparadores em todas as linhas</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-chart-line text-yellow-500 mr-2 mt-1"></i>
+                    <span>Complexidade alta mas melhor taxa de hit</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Set Associative -->
+            <div
+              class="bg-white rounded-lg shadow-md overflow-hidden border border-green-200"
+            >
+              <div
+                class="flex items-center justify-center bg-green-100 p-4 border-b border-green-200"
+              >
+                <div class="bg-green-100 p-3 rounded-full">
+                  <i class="fas fa-sitemap text-green-500 text-xl"></i>
+                </div>
+                <h3 class="font-bold text-green-800 text-center">
+                  Conjunto Associativo<br />(Set-Associative Cache)
+                </h3>
+              </div>
+              <div class="px-4 mt-2">
+                <p>
+                  O mapeamento por conjunto associativo combina os dois métodos
+                  anteriores. A cache é dividida em conjuntos, e cada bloco da
+                  memória pode ser armazenado em qualquer linha dentro de um
+                  conjunto específico.
+                </p>
+
+                <p>
+                  A estrutura é semelhante ao mapeamento direto, mas com
+                  múltiplas linhas por conjunto. O endereço de memória é
+                  dividido em:
+                </p>
+
+                <ul class="text-sm space-y-2 mt-2 mb-4">
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                    <span>
+                      <strong>Offset (Deslocamento):</strong> especifica o byte
+                      dentro do bloco</span
+                    >
+                  </li>
+                  <li class="flex items-center">
+                    <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                    <span
+                      ><strong>Index (Índice):</strong> determina o conjunto
+                      específico, onde cada conjunto pode ter várias
+                      linhas</span
+                    >
+                  </li>
+                  <li class="flex items-center">
+                    <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                    <span
+                      ><strong>Tag (Etiqueta):</strong> identifica o bloco de
+                      dados dentro do conjunto</span
+                    >
+                  </li>
+                </ul>
+              </div>
+
+              <div class="px-4 mt-7">
+                <p class="font-semibold mb-2 border-t pt-2">
+                  Vantagens/Desvantagens:
+                </p>
+                <ul class="text-sm space-y-7 mb-4">
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                    <span>Compromisso entre os dois anteriores</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i
+                      class="fas fa-exclamation-circle text-red-500 mr-2 mt-1"
+                    ></i>
+                    <span>N vias por conjunto (comum: 4, 8, 16-way)</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-chart-line text-yellow-500 mr-2 mt-1"></i>
+                    <span>Bom equilíbrio entre desempenho e complexidade</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Locality Principles section -->
+      <section class="mb-16">
+        <div class="bg-white rounded-xl shadow-lg p-8">
+          <h2 class="text-2xl font-bold mb-4 text-indigo-700 border-b pb-2">
+            <i class="fas fa-random mr-2"></i> Princípios de Localidade
+          </h2>
+
+          <p class="mb-4">
+            O desempenho da memória cache é otimizado por dois princípios
+            fundamentais: localidade temporal e localidade espacial.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="p-4 bg-blue-50 rounded-lg shadow">
+              <h4 class="font-semibold text-blue-700 flex items-center">
+                <i class="fas fa-history mr-2"></i> Localidade Temporal
+              </h4>
+              <p>
+                Se um dado foi acessado recentemente, é provável que seja
+                acessado novamente em breve. A cache armazena esses dados para
+                acelerar o acesso futuro.
+              </p>
+              <div class="mt-3 p-2 bg-white rounded text-xs">
+                <p class="font-semibold">Exemplo:</p>
+                <p>Em um vetor de dados, acessar elementos consecutivos.</p>
+              </div>
+            </div>
+
+            <div class="bg-gray-50 p-4 bg-green-50 rounded-lg shadow">
+              <h4 class="font-semibold text-green-700 flex items-center">
+                <i class="fas fa-expand-arrows-alt mr-2"></i> Localidade
+                Espacial
+              </h4>
+              <p>
+                Dados próximos em endereço tendem a ser acessados juntos. A
+                cache carrega blocos inteiros de dados para aproveitar essa
+                proximidade.
+              </p>
+              <div class="mt-3 p-2 bg-white rounded text-xs">
+                <p class="font-semibold">Exemplo:</p>
+                <p>
+                  Variáveis de controle dentro de um loop são acessadas
+                  repetidamente.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <p class="mt-6">
+            Esses princípios são fundamentais para o design eficiente de
+            memórias cache, permitindo que elas reduzam significativamente o
+            tempo de acesso aos dados mais utilizados.
+          </p>
+        </div>
+      </section>
+
+      <!-- Cache Operation Animation -->
+      <section class="mb-16">
+        <div class="bg-white rounded-xl shadow-lg p-8">
+          <h2 class="text-2xl font-bold mb-4 text-indigo-700 border-b pb-2">
+            <i class="fas fa-sync-alt mr-2"></i> Funcionamento da Cache
+            (Hit/Miss)
+          </h2>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="flex flex-col justify-around p-4">
+              <p class="mb-4">
+                A cache é uma memória de alta velocidade que armazena dados
+                frequentemente acessados para acelerar o desempenho do sistema.
+                Quando o processador solicita um dado, a cache verifica se ele
+                já está armazenado (Hit) ou se precisa buscá-lo na memória
+                principal (Miss).
+              </p>
+
+              <div class="space-y-4">
+                <h4
+                  class="font-semibold mb-2 text-indigo-600 flex items-center border-b pb-2"
+                >
+                  <i class="fas fa-cogs mr-2"></i> Fluxo de funcionamento
+                  (Hit/Miss)
+                </h4>
+                <div class="flex items-start">
+                  <div class="ml-3">
+                    <p class="mb-2">
+                      Quando o processador solicita um dado as seguintes ações
+                      ocorrem:
+                    </p>
+                    <p class="text-sm text-gray-500"></p>
+                    <ul class="list-disc pl-6">
+                      <li class="mb-2">
+                        <strong>Verificação na Cache (Hit ou Miss)</strong>: A
+                        cache verifica se possui uma cópia do dado solicitado.
+                      </li>
+                      <li class="mb-2">
+                        <strong>Cache Hit (Acerto)</strong>: Se sim, ela o
+                        fornece diretamente o dado ao processador. Isso é um
+                        “acerto” e é muito rápido. Queremos uma taxa de acertos
+                        próxima de 100%.
+                      </li>
+                      <li class="mb-2">
+                        <strong>Cache Miss (Falta)</strong>: Se a não, ela
+                        replica o pedido para os próximos níveis da hierarquia
+                        (L2, depois L3, depois DRAM, etc.). O dado é então
+                        buscado no nível inferior, trazido para a cache (e de lá
+                        para o processador), e também armazenado na cache para
+                        futuros acessos.
+                      </li>
+                      <p></p>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-center my-4">
+              <div class="text-center">
+                <div
+                  class="flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 mx-auto mb-2"
+                >
+                  <i class="fas fa-microchip"></i>
+                </div>
+                <p class="text-sm border-b pb-2">CPU requisita dado</p>
+                <div class="h-12 flex items-center justify-around">
+                  <i class="fas fa-arrow-down"></i>
+                </div>
+                <div
+                  class="flex items-center justify-center h-12 w-12 rounded-full bg-purple-100 text-purple-600 mx-auto mb-2"
+                >
+                  <i class="fas fa-search"></i>
+                </div>
+                <p class="text-sm border-b pb-2">Verifica Cache</p>
+
+                <div class="flex">
+                  <div class="w-1/2 pr-1">
+                    <div class="h-12 flex items-center justify-around">
+                      <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <div
+                      class="flex items-center justify-center h-12 w-12 rounded-full bg-green-100 text-green-600 mx-auto mb-2"
+                    >
+                      <i class="fas fa-check"></i>
+                    </div>
+                    <p class="text-sm border-b pb-2">Hit</p>
+                    <div class="h-12 flex items-center justify-around">
+                      <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <p class="text-xs text-gray-500 border-b pb-2">
+                      Dado encontrado
+                    </p>
+                  </div>
+                  <div class="w-1/2">
+                    <div class="h-12 flex items-center justify-around">
+                      <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <div
+                      class="flex items-center justify-center h-12 w-12 rounded-full bg-red-100 text-red-600 mx-auto mb-2"
+                    >
+                      <i class="fas fa-times"></i>
+                    </div>
+                    <p class="text-sm border-b pb-2">Miss</p>
+                    <div class="h-12 flex items-center justify-around">
+                      <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <p class="text-xs text-gray-500 border-b pb-2">
+                      Busca na RAM
+                    </p>
+                    <div class="h-12 flex items-center justify-around">
+                      <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <p class="text-xs text-gray-500 border-b pb-2">
+                      Dado é copiado para cache
+                    </p>
+                    <div class="h-12 flex items-center justify-around">
+                      <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <p class="text-xs text-gray-500 border-b pb-2">
+                      Dado é enviado para CPU
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cache Demo section -->
+      <section id="demo" class="mb-12">
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h2 class="text-2xl font-bold mb-4 text-indigo-700 border-b pb-2">
+            <i class="fas fa-laptop-code mr-2"></i> Demonstração de
+            Funcionamento
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 class="font-semibold mb-3 text-indigo-600">
+                Simulador de Memória Cache
+              </h3>
+
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Tipo de Mapeamento:</label
+                >
+                <select
+                  id="mappingType"
+                  class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  onchange="resetCache()"
+                >
+                  <option value="direct" selected="selected">
+                    Mapeamento Direto
+                  </option>
+                  <option value="fully">Totalmente Associativo</option>
+                  <option value="set">Conjunto Associativo (2-way)</option>
+                </select>
+              </div>
+
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Endereço a acessar:</label
+                >
+                <div class="flex">
+                  <input
+                    type="text"
+                    id="addressInput"
+                    class="flex-1 rounded-l-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                    placeholder="Ex: 0x12A"
+                  />
+                  <button
+                    onclick="accessMemory()"
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-r-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50"
+                  >
+                    Acessar
+                  </button>
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Pré-carregar:</label
+                >
+                <div class="space-x-2">
+                  <button
+                    onclick="preloadRandom()"
+                    class="bg-blue-100 text-blue-800 px-3 py-1 rounded-md text-sm hover:bg-blue-200"
+                  >
+                    Dados Aleatórios
+                  </button>
+                  <button
+                    onclick="preloadSequential()"
+                    class="bg-green-100 text-green-800 px-3 py-1 rounded-md text-sm hover:bg-green-200"
+                  >
+                    Acesso Sequencial
+                  </button>
+                  <button
+                    onclick="resetCache()"
+                    class="bg-red-100 text-red-800 px-3 py-1 rounded-md text-sm hover:bg-red-200"
+                  >
+                    Limpar Cache
+                  </button>
+                </div>
+              </div>
+
+              <div class="bg-gray-50 p-3 rounded-md">
+                <h4 class="text-sm font-medium text-gray-700 mb-2">
+                  Estatísticas:
+                </h4>
+                <div class="grid grid-cols-3 gap-2 text-sm">
+                  <div>
+                    <span class="font-medium">Acessos:</span>
+                    <span id="totalAccesses">0</span>
+                  </div>
+                  <div>
+                    <span class="font-medium">Hits:</span>
+                    <span id="hitCount">0</span> (<span id="hitRate">0</span>%)
+                  </div>
+                  <div>
+                    <span class="font-medium">Misses:</span>
+                    <span id="missCount">0</span> (<span id="missRate">100</span
+                    >%)
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="cacheDemo">
+              <h4 class="text-sm font-medium text-gray-700 mb-2">
+                Estado da Cache:
+              </h4>
+              <div id="cacheState" class="text-xs">
+                <div class="text-xs font-medium mb-1">
+                  Mapeamento Direto - Cada endereço mapeia para uma linha
+                  específica
+                </div>
+                <div class="grid grid-cols-5 gap-1 text-xs mb-1">
+                  <div class="font-semibold">Linha</div>
+                  <div class="font-semibold col-span-4">Conteúdo</div>
+                  <div class="p-1 bg-gray-100">0</div>
+                  <div class="p-1 bg-red-100 col-span-4">Vazia</div>
+                  <div class="p-1 bg-gray-100">1</div>
+                  <div class="p-1 bg-red-100 col-span-4">Vazia</div>
+                  <div class="p-1 bg-gray-100">2</div>
+                  <div class="p-1 bg-red-100 col-span-4">Vazia</div>
+                  <div class="p-1 bg-gray-100">3</div>
+                  <div class="p-1 bg-red-100 col-span-4">Vazia</div>
+                  <div class="p-1 bg-gray-100">4</div>
+                  <div class="p-1 bg-red-100 col-span-4">Vazia</div>
+                  <div class="p-1 bg-gray-100">5</div>
+                  <div class="p-1 bg-red-100 col-span-4">Vazia</div>
+                  <div class="p-1 bg-gray-100">6</div>
+                  <div class="p-1 bg-red-100 col-span-4">Vazia</div>
+                  <div class="p-1 bg-gray-100">7</div>
+                  <div class="p-1 bg-red-100 col-span-4">Vazia</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <!-- Back to top button -->
+    <button
+      id="backToTop"
+      class="fixed bottom-6 right-6 bg-blue-600 text-white px-4 py-3 rounded-full shadow-lg hidden"
+    >
+      <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      // Chart for performance gap
+      const ctx = document.getElementById("performanceChart").getContext("2d");
+      const performanceChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: ["1980", "1990", "2000", "2010", "2020"],
+          datasets: [
+            {
+              label: "Melhoria no desempenho da CPU",
+              data: [10, 20, 40, 80, 160],
+              borderColor: "rgb(75, 192, 192)",
+              backgroundColor: "rgba(75, 192, 192, 0.1)",
+              tension: 0.3,
+              fill: true,
+            },
+            {
+              label: "Melhoria na latência da DRAM",
+              data: [10, 12, 14, 16, 18],
+              borderColor: "rgb(255, 99, 132)",
+              backgroundColor: "rgba(255, 99, 132, 0.1)",
+              tension: 0.3,
+              fill: true,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: "Divergência de Performance Entre CPU e DRAM",
+              font: {
+                size: 14,
+              },
+            },
+            legend: {
+              position: "top",
+            },
+          },
+          scales: {
+            y: {
+              title: {
+                display: true,
+                text: "Performance Relativa",
+              },
+            },
+          },
+        },
+      });
+
+      // Memory hierarchy modal info
+      const levelInfo = {
+        registers: {
+          title: "Registradores CPU",
+          content:
+            "São os mais rápidos, acessados em 1 ciclo de relógio do processador, com capacidade mínima (tipicamente 32-64 registradores em processadores modernos). Armazenam os dados que estão sendo processados diretamente pela CPU.",
+        },
+        l1: {
+          title: "Cache L1",
+          content:
+            "Construída com S-RAM, acessada em 1-2 ciclos de relógio. É pequena (tipicamente 32-64KB), muito rápida e cara. Dividida em cache de instruções e cache de dados em muitas arquiteturas.",
+        },
+        l2: {
+          title: "Cache L2",
+          content:
+            "Também S-RAM, um pouco maior (256KB-2MB) e mais lenta que L1 (6-12 ciclos). Frequentemente unificada (armazena tanto instruções quanto dados).",
+        },
+        l3: {
+          title: "Cache L3",
+          content:
+            "Maior (4-32MB) e mais lenta que L2, mas ainda significativamente mais rápida que a memória principal (DRAM). Compartilhada entre todos os núcleos em processadores multi-core.",
+        },
+        main: {
+          title: "Memória Principal (DRAM)",
+          content:
+            "Acessada em 100-600 ciclos, com grande capacidade (4-128GB em sistemas modernos) e custo mais baixo. Perde dados quando a energia é desligada mas mantém o estado muito mais tempo que as SRAM.",
+        },
+        secondary: {
+          title: "Armazenamento Secundário (HD/SSD)",
+          content:
+            "Dispositivos como SSDs (Flash) e HDs (magnéticos) são os mais lentos, porém com capacidade muito maior (500GB-8TB) e custo baixo por gigabyte. São não-voláteis, mantendo os dados mesmo sem energia.",
+        },
+      };
+
+      function showLevelInfo(level) {
+        document.getElementById("modalTitle").textContent =
+          levelInfo[level].title;
+        document.getElementById("modalContent").textContent =
+          levelInfo[level].content;
+        document.getElementById("levelInfoModal").classList.remove("hidden");
+      }
+
+      function hideLevelInfo() {
+        document.getElementById("levelInfoModal").classList.add("hidden");
+      }
+
+      // Cache simulation demo
+      let cache = [];
+      let totalAccesses = 0;
+      let hitCount = 0;
+
+      function resetCache() {
+        const mappingType =
+          document.getElementById("mappingType")?.value || "direct";
+        cache = [];
+        if (mappingType === "set") {
+          // Conjunto Associativo (2-way): 8 conjuntos × 2 vias = 16 linhas
+          for (let i = 0; i < 16; i++) {
+            cache.push({
+              valid: false,
+              tag: "",
+              data: "",
+              way: i % 2,
+            });
+          }
+        } else {
+          // Direto ou totalmente associativo: 8 linhas
+          for (let i = 0; i < 8; i++) {
+            cache.push({
+              valid: false,
+              tag: "",
+              data: "",
+              way: 0,
+            });
+          }
+        }
+        totalAccesses = 0;
+        hitCount = 0;
+        updateStats();
+        updateCacheDisplay();
+      }
+
+      function updateStats() {
+        document.getElementById("totalAccesses").textContent = totalAccesses;
+        document.getElementById("hitCount").textContent = hitCount;
+        document.getElementById("missCount").textContent =
+          totalAccesses - hitCount;
+
+        const hitRate =
+          totalAccesses > 0 ? Math.round((hitCount / totalAccesses) * 100) : 0;
+        document.getElementById("hitRate").textContent = hitRate;
+        document.getElementById("missRate").textContent = 100 - hitRate;
+      }
+
+      function updateCacheDisplay() {
+        const mappingType = document.getElementById("mappingType").value;
+        const cacheState = document.getElementById("cacheState");
+        let html = "";
+
+        if (mappingType === "direct") {
+          html +=
+            '<div class="text-xs font-medium mb-1">Mapeamento Direto - Cada endereço mapeia para uma linha específica</div>';
+          html += '<div class="grid grid-cols-5 gap-1 text-xs mb-1">';
+          html +=
+            '<div class="font-semibold">Linha</div><div class="font-semibold col-span-4">Conteúdo</div>';
+
+          for (let i = 0; i < 8; i++) {
+            html += `<div class="p-1 bg-gray-100">${i}</div>`;
+            if (cache[i].valid) {
+              html += `<div class="p-1 bg-green-100 col-span-4">Tag: 0x${cache[i].tag}, Dados: ${cache[i].data}</div>`;
+            } else {
+              html += '<div class="p-1 bg-red-100 col-span-4">Vazia</div>';
+            }
+          }
+          html += "</div>";
+        } else if (mappingType === "fully") {
+          html +=
+            '<div class="text-xs font-medium mb-1">Totalmente Associativo - Qualquer endereço pode ir para qualquer linha livre</div>';
+
+          cache.forEach((line, index) => {
+            if (index === 0) {
+              html += '<div class="grid grid-cols-2 gap-1 text-xs mb-1">';
+              html +=
+                '<div class="font-semibold">Linha</div><div class="font-semibold">Conteúdo</div>';
+            }
+            html += `<div class="p-1 bg-gray-100">${index}</div>`;
+            if (line.valid) {
+              html += `<div class="p-1 bg-green-100">Tag: 0x${line.tag}, Dados: ${line.data}</div>`;
+            } else {
+              html += '<div class="p-1 bg-red-100">Vazia</div>';
+            }
+            if (index === 7) html += "</div>";
+          });
+        } else {
+          // set associative
+          html +=
+            '<div class="text-xs font-medium mb-1">Conjunto Associativo (2-way) - 8 conjuntos, cada um com 2 vias</div>';
+
+          const sets = [];
+          for (let i = 0; i < 8; i++) {
+            sets.push([cache[i * 2], cache[i * 2 + 1]]);
+          }
+
+          html += '<div class="grid grid-cols-3 gap-1 text-xs mb-1">';
+          html +=
+            '<div class="font-semibold">Conjunto</div><div class="font-semibold">Via 0</div><div class="font-semibold">Via 1</div>';
+
+          sets.forEach((set, index) => {
+            html += `<div class="p-1 bg-gray-100">${index}</div>`;
+
+            if (set[0].valid) {
+              html += `<div class="p-1 bg-green-100">Tag: 0x${set[0].tag}, Dados: ${set[0].data}</div>`;
+            } else {
+              html += '<div class="p-1 bg-red-100">Vazia</div>';
+            }
+
+            if (set[1].valid) {
+              html += `<div class="p-1 bg-green-100">Tag: 0x${set[1].tag}, Dados: ${set[1].data}</div>`;
+            } else {
+              html += '<div class="p-1 bg-red-100">Vazia</div>';
+            }
+          });
+          html += "</div>";
+        }
+
+        cacheState.innerHTML = html;
+      }
+
+      function getRandomData() {
+        const values = [
+          "0x12",
+          "0x34",
+          "0x56",
+          "0x78",
+          "0x9A",
+          "0xBC",
+          "0xDE",
+          "0xF0",
+        ];
+        return values[Math.floor(Math.random() * values.length)];
+      }
+
+      function preloadRandom() {
+        resetCache();
+        const mappingType = document.getElementById("mappingType").value;
+
+        if (mappingType === "direct") {
+          for (let i = 0; i < 4; i++) {
+            const addr = Math.floor(Math.random() * 16).toString(16);
+            const data = getRandomData();
+
+            const index = parseInt(addr, 16) % 8;
+            cache[index] = {
+              valid: true,
+              tag: addr,
+              data: data,
+              way: 0,
+            };
+          }
+        } else if (mappingType === "fully") {
+          // Preenche linhas aleatórias
+          let linhasDisponiveis = Array.from({ length: 8 }, (_, i) => i);
+          for (let i = 0; i < 4; i++) {
+            if (linhasDisponiveis.length === 0) break;
+            const addr = Math.floor(Math.random() * 16).toString(16);
+            const data = getRandomData();
+
+            // Sorteia uma linha vazia aleatória
+            const idx = Math.floor(Math.random() * linhasDisponiveis.length);
+            const linha = linhasDisponiveis.splice(idx, 1)[0];
+            cache[linha] = {
+              valid: true,
+              tag: addr,
+              data: data,
+              way: 0,
+            };
+          }
+        } else {
+          // set associative
+          for (let i = 0; i < 4; i++) {
+            const addr = Math.floor(Math.random() * 16).toString(16);
+            const data = getRandomData();
+
+            const setIndex = parseInt(addr, 16) % 4;
+
+            if (!cache[setIndex * 2].valid) {
+              cache[setIndex * 2] = {
+                valid: true,
+                tag: addr,
+                data: data,
+                way: 0,
+              };
+            } else {
+              cache[setIndex * 2 + 1] = {
+                valid: true,
+                tag: addr,
+                data: data,
+                way: 1,
+              };
+            }
+          }
+        }
+
+        updateCacheDisplay();
+      }
+
+      function preloadSequential() {
+        resetCache();
+        const mappingType = document.getElementById("mappingType").value;
+
+        for (let i = 0; i < 4; i++) {
+          const addr = (i + 8).toString(16);
+          const data = getRandomData();
+
+          if (mappingType === "direct") {
+            const index = parseInt(addr, 16) % 8;
+            cache[index] = {
+              valid: true,
+              tag: addr,
+              data: data,
+              way: 0,
+            };
+          } else if (mappingType === "fully") {
+            for (let j = 0; j < 8; j++) {
+              if (!cache[j].valid) {
+                cache[j] = {
+                  valid: true,
+                  tag: addr,
+                  data: data,
+                  way: 0,
+                };
+                break;
+              }
+            }
+          } else {
+            // set associative
+            const setIndex = parseInt(addr, 16) % 4;
+
+            if (!cache[setIndex * 2].valid) {
+              cache[setIndex * 2] = {
+                valid: true,
+                tag: addr,
+                data: data,
+                way: 0,
+              };
+            } else {
+              cache[setIndex * 2 + 1] = {
+                valid: true,
+                tag: addr,
+                data: data,
+                way: 1,
+              };
+            }
+          }
+        }
+
+        updateCacheDisplay();
+      }
+
+      function accessMemory() {
+        const addressInput = document
+          .getElementById("addressInput")
+          .value.trim();
+        if (!addressInput || !/^(0x)?[0-9a-fA-F]+$/.test(addressInput)) {
+          alert(
+            "Por favor, digite um endereço hexadecimal válido (ex: 0x12A ou 12A)",
+          );
+          return;
+        }
+
+        // Process address (remove 0x if present)
+        const addr = addressInput.startsWith("0x")
+          ? addressInput.substring(2)
+          : addressInput;
+        const addrNum = parseInt(addr, 16);
+        const data = getRandomData();
+
+        totalAccesses++;
+
+        const mappingType = document.getElementById("mappingType").value;
+        let hit = false;
+
+        if (mappingType === "direct") {
+          const index = addrNum % 8;
+
+          if (cache[index].valid && cache[index].tag === addr) {
+            // Cache hit
+            hit = true;
+            cache[index].lastAccess = Date.now();
+          } else {
+            // Cache miss - replace at index
+            cache[index] = {
+              valid: true,
+              tag: addr,
+              data: data,
+              way: 0,
+            };
+          }
+        } else if (mappingType === "fully") {
+          // Search all lines for tag
+          for (let i = 0; i < cache.length; i++) {
+            if (cache[i].valid && cache[i].tag === addr) {
+              // Cache hit
+              hit = true;
+              cache[i].lastAccess = Date.now();
+              break;
+            }
+          }
+
+          if (!hit) {
+            // Find first invalid line to replace
+            let replaced = false;
+            for (let i = 0; i < cache.length; i++) {
+              if (!cache[i].valid) {
+                cache[i] = {
+                  valid: true,
+                  tag: addr,
+                  data: data,
+                  way: 0,
+                };
+                replaced = true;
+                break;
+              }
+            }
+
+            if (!replaced) {
+              // If all lines are valid, replace the least recently used
+              let lruIndex = 0;
+              let lruTime = cache[0].lastAccess || 0;
+
+              for (let i = 1; i < cache.length; i++) {
+                if ((cache[i].lastAccess || 0) < lruTime) {
+                  lruIndex = i;
+                  lruTime = cache[i].lastAccess || 0;
+                }
+              }
+
+              cache[lruIndex] = {
+                valid: true,
+                tag: addr,
+                data: data,
+                way: 0,
+              };
+            }
+          }
+        } else {
+          // set associative
+          const setIndex = addrNum % 4;
+          const way0 = cache[setIndex * 2];
+          const way1 = cache[setIndex * 2 + 1];
+
+          if (way0.valid && way0.tag === addr) {
+            // Cache hit in way0
+            hit = true;
+            cache[setIndex * 2].lastAccess = Date.now();
+          } else if (way1.valid && way1.tag === addr) {
+            // Cache hit in way1
+            hit = true;
+            cache[setIndex * 2 + 1].lastAccess = Date.now();
+          } else {
+            // Cache miss - replace in this set
+            if (!way0.valid) {
+              cache[setIndex * 2] = {
+                valid: true,
+                tag: addr,
+                data: data,
+                way: 0,
+              };
+            } else if (!way1.valid) {
+              cache[setIndex * 2 + 1] = {
+                valid: true,
+                tag: addr,
+                data: data,
+                way: 1,
+              };
+            } else {
+              // Both ways are valid - replace LRU
+              const way0time = way0.lastAccess || 0;
+              const way1time = way1.lastAccess || 0;
+
+              if (way0time < way1time) {
+                // Replace way0
+                cache[setIndex * 2] = {
+                  valid: true,
+                  tag: addr,
+                  data: data,
+                  way: 0,
+                };
+              } else {
+                // Replace way1
+                cache[setIndex * 2 + 1] = {
+                  valid: true,
+                  tag: addr,
+                  data: data,
+                  way: 1,
+                };
+              }
+            }
+          }
+        }
+
+        if (hit) hitCount++;
+        updateStats();
+        updateCacheDisplay();
+
+        // Highlight the result
+        const cacheDemo = document.getElementById("cacheDemo");
+        cacheDemo.classList.add("access-animation");
+        setTimeout(() => {
+          cacheDemo.classList.remove("access-animation");
+        }, 1000);
+
+        // Show alert
+        alert(
+          `Acesso à memória 0x${addr}: ${
+            hit ? "CACHE HIT" : "CACHE MISS"
+          }\n\nDados: ${data}`,
+        );
+      }
+
+      // Initialize the cache
+      resetCache();
+
+      // Back to top button
+      const backToTopButton = document.getElementById("backToTop");
+
+      window.addEventListener("scroll", () => {
+        if (window.pageYOffset > 300) {
+          backToTopButton.classList.remove("hidden");
+        } else {
+          backToTopButton.classList.add("hidden");
+        }
+      });
+
+      backToTopButton.addEventListener("click", () => {
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      });
+
+      // Redireciona para index.html ao clicar no cabeçalho azul
+      document.getElementById("goHome").addEventListener("click", function () {
+        window.location.href = "index.html";
+      });
+    </script>
+  </body>
+</html>
