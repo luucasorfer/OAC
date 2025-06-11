@@ -1328,30 +1328,23 @@
       let hitCount = 0;
 
       function resetCache() {
-        const mappingType =
-          document.getElementById("mappingType")?.value || "direct";
+        const mappingType = document.getElementById("mappingType").value;
         cache = [];
-        if (mappingType === "set") {
-          // Conjunto Associativo (2-way): 8 conjuntos × 2 vias = 16 linhas
-          for (let i = 0; i < 16; i++) {
-            cache.push({
-              valid: false,
-              tag: "",
-              data: "",
-              way: i % 2,
-            });
-          }
-        } else {
-          // Direto ou totalmente associativo: 8 linhas
-          for (let i = 0; i < 8; i++) {
-            cache.push({
-              valid: false,
-              tag: "",
-              data: "",
-              way: 0,
-            });
-          }
+
+        // Definir tamanho da cache baseado no tipo
+        const size = mappingType === "set" ? 16 : 8; // 16 linhas para set-associative (4 conjuntos x 4 vias)
+
+        for (let i = 0; i < size; i++) {
+          cache.push({
+            valid: false,
+            tag: "",
+            data: "",
+            set: mappingType === "set" ? Math.floor(i / 2) : 0,
+            way: mappingType === "set" ? i % 2 : 0, // way só é relevante para set-associative
+            lastAccess: 0, // Registro de último acesso para política LRU
+          });
         }
+
         totalAccesses = 0;
         hitCount = 0;
         updateStats();
@@ -1410,33 +1403,34 @@
             if (index === 7) html += "</div>";
           });
         } else {
-          // set associative
+          // set associative 4-way
           html +=
-            '<div class="text-xs font-medium mb-1">Conjunto Associativo (2-way) - 8 conjuntos, cada um com 2 vias</div>';
+            '<div class="text-xs font-medium mb-1">Conjunto Associativo (4-way) - 4 conjuntos, cada um com 4 vias<br/><br/>Exemplo para preencher as vias do conjunto 0:<br/><br/>0x00; Preenche via 0 do conjunto 0<br/>0x10; Preenche via 1 do conjunto 0<br/>0x20; Preenche via 2 do conjunto 0<br/>0x30; Preenche via 3 do conjunto 0</div>';
 
           const sets = [];
-          for (let i = 0; i < 8; i++) {
-            sets.push([cache[i * 2], cache[i * 2 + 1]]);
+          for (let i = 0; i < 4; i++) {
+            sets.push([
+              cache[i * 4],
+              cache[i * 4 + 1],
+              cache[i * 4 + 2],
+              cache[i * 4 + 3],
+            ]);
           }
 
-          html += '<div class="grid grid-cols-3 gap-1 text-xs mb-1">';
+          html += '<div class="grid grid-cols-5 gap-1 text-xs mb-1">';
           html +=
-            '<div class="font-semibold">Conjunto</div><div class="font-semibold">Via 0</div><div class="font-semibold">Via 1</div>';
+            '<div class="font-semibold">Conjunto</div><div class="font-semibold">Via 0</div><div class="font-semibold">Via 1</div><div class="font-semibold">Via 2</div><div class="font-semibold">Via 3</div>';
 
           sets.forEach((set, index) => {
             html += `<div class="p-1 bg-gray-100">${index}</div>`;
 
-            if (set[0].valid) {
-              html += `<div class="p-1 bg-green-100">Tag: 0x${set[0].tag}, Dados: ${set[0].data}</div>`;
-            } else {
-              html += '<div class="p-1 bg-red-100">Vazia</div>';
-            }
-
-            if (set[1].valid) {
-              html += `<div class="p-1 bg-green-100">Tag: 0x${set[1].tag}, Dados: ${set[1].data}</div>`;
-            } else {
-              html += '<div class="p-1 bg-red-100">Vazia</div>';
-            }
+            set.forEach((way) => {
+              if (way.valid) {
+                html += `<div class="p-1 bg-green-100">Tag: 0x${way.tag}<br>Dados: ${way.data}</div>`;
+              } else {
+                html += '<div class="p-1 bg-red-100">Vazia</div>';
+              }
+            });
           });
           html += "</div>";
         }
@@ -1494,8 +1488,8 @@
             };
           }
         } else {
-          // set associative
-          for (let i = 0; i < 4; i++) {
+          // set associative (2-way, 8 conjuntos = 16 linhas)
+          for (let i = 0; i < 8; i++) {
             const addr = Math.floor(Math.random() * 16).toString(16);
             const data = getRandomData();
 
@@ -1507,6 +1501,8 @@
                 tag: addr,
                 data: data,
                 way: 0,
+                set: setIndex,
+                lastAccess: Date.now(),
               };
             } else {
               cache[setIndex * 2 + 1] = {
@@ -1514,6 +1510,8 @@
                 tag: addr,
                 data: data,
                 way: 1,
+                set: setIndex,
+                lastAccess: Date.now(),
               };
             }
           }
@@ -1525,48 +1523,55 @@
       function preloadSequential() {
         resetCache();
         const mappingType = document.getElementById("mappingType").value;
+        const sequentialAddr = [8, 9, 10, 11]; // Endereços sequenciais em hexa
 
-        for (let i = 0; i < 4; i++) {
-          const addr = (i + 8).toString(16);
+        for (let i = 0; i < sequentialAddr.length; i++) {
+          const addr = sequentialAddr[i].toString(16).toUpperCase();
           const data = getRandomData();
+          const addrNum = parseInt(addr, 16);
 
           if (mappingType === "direct") {
-            const index = parseInt(addr, 16) % 8;
+            const index = addrNum % 8;
             cache[index] = {
               valid: true,
               tag: addr,
               data: data,
-              way: 0,
+              lastAccess: Date.now(),
             };
           } else if (mappingType === "fully") {
-            for (let j = 0; j < 8; j++) {
+            // Encontrar primeira linha vazia
+            for (let j = 0; j < cache.length; j++) {
               if (!cache[j].valid) {
                 cache[j] = {
                   valid: true,
                   tag: addr,
                   data: data,
-                  way: 0,
+                  lastAccess: Date.now(),
                 };
                 break;
               }
             }
           } else {
             // set associative
-            const setIndex = parseInt(addr, 16) % 4;
+            const setIndex = (addrNum % 8) * 2;
 
-            if (!cache[setIndex * 2].valid) {
-              cache[setIndex * 2] = {
+            if (!cache[setIndex].valid) {
+              cache[setIndex] = {
                 valid: true,
                 tag: addr,
                 data: data,
                 way: 0,
+                set: addrNum % 8,
+                lastAccess: Date.now(),
               };
             } else {
-              cache[setIndex * 2 + 1] = {
+              cache[setIndex + 1] = {
                 valid: true,
                 tag: addr,
                 data: data,
                 way: 1,
+                set: addrNum % 8,
+                lastAccess: Date.now(),
               };
             }
           }
@@ -1579,161 +1584,178 @@
         const addressInput = document
           .getElementById("addressInput")
           .value.trim();
-        if (!addressInput || !/^(0x)?[0-9a-fA-F]+$/.test(addressInput)) {
+
+        // Validar entrada
+        if (!addressInput) {
+          alert("Por favor, digite um endereço de memória");
+          return;
+        }
+
+        // Converter para hexadecimal (aceita com ou sem 0x)
+        let addr;
+        try {
+          if (addressInput.startsWith("0x")) {
+            addr = parseInt(addressInput.substring(2), 16)
+              .toString(16)
+              .toUpperCase();
+          } else {
+            addr = parseInt(addressInput, 16).toString(16).toUpperCase();
+          }
+
+          if (isNaN(parseInt(addr, 16))) {
+            throw new Error();
+          }
+        } catch {
           alert(
             "Por favor, digite um endereço hexadecimal válido (ex: 0x12A ou 12A)",
           );
           return;
         }
 
-        // Process address (remove 0x if present)
-        const addr = addressInput.startsWith("0x")
-          ? addressInput.substring(2)
-          : addressInput;
         const addrNum = parseInt(addr, 16);
         const data = getRandomData();
-
         totalAccesses++;
-
         const mappingType = document.getElementById("mappingType").value;
         let hit = false;
+        let replaced = false;
 
-        if (mappingType === "direct") {
-          const index = addrNum % 8;
-
-          if (cache[index].valid && cache[index].tag === addr) {
-            // Cache hit
-            hit = true;
-            cache[index].lastAccess = Date.now();
-          } else {
-            // Cache miss - replace at index
-            cache[index] = {
-              valid: true,
-              tag: addr,
-              data: data,
-              way: 0,
-            };
-          }
-        } else if (mappingType === "fully") {
-          // Search all lines for tag
-          for (let i = 0; i < cache.length; i++) {
-            if (cache[i].valid && cache[i].tag === addr) {
-              // Cache hit
+        // Encontrar ou substituir linha na cache
+        switch (mappingType) {
+          case "direct":
+            const index = addrNum % 8;
+            if (cache[index].valid && cache[index].tag === addr) {
               hit = true;
-              cache[i].lastAccess = Date.now();
-              break;
+            } else {
+              cache[index] = { valid: true, tag: addr, data };
+              replaced = true;
             }
-          }
+            cache[index].lastAccess = Date.now();
+            break;
 
-          if (!hit) {
-            // Find first invalid line to replace
-            let replaced = false;
+          case "fully":
+            // 1. Procurar pela tag (hit)
             for (let i = 0; i < cache.length; i++) {
-              if (!cache[i].valid) {
-                cache[i] = {
-                  valid: true,
-                  tag: addr,
-                  data: data,
-                  way: 0,
-                };
-                replaced = true;
+              if (cache[i].valid && cache[i].tag === addr) {
+                hit = true;
+                cache[i].lastAccess = Date.now();
                 break;
               }
             }
 
-            if (!replaced) {
-              // If all lines are valid, replace the least recently used
-              let lruIndex = 0;
-              let lruTime = cache[0].lastAccess || 0;
-
-              for (let i = 1; i < cache.length; i++) {
-                if ((cache[i].lastAccess || 0) < lruTime) {
-                  lruIndex = i;
-                  lruTime = cache[i].lastAccess || 0;
+            if (!hit) {
+              // 2. Procurar por linha inválida
+              for (let i = 0; i < cache.length; i++) {
+                if (!cache[i].valid) {
+                  cache[i] = {
+                    valid: true,
+                    tag: addr,
+                    data,
+                    lastAccess: Date.now(),
+                  };
+                  replaced = true;
+                  break;
                 }
               }
 
-              cache[lruIndex] = {
-                valid: true,
-                tag: addr,
-                data: data,
-                way: 0,
-              };
-            }
-          }
-        } else {
-          // set associative
-          const setIndex = addrNum % 4;
-          const way0 = cache[setIndex * 2];
-          const way1 = cache[setIndex * 2 + 1];
-
-          if (way0.valid && way0.tag === addr) {
-            // Cache hit in way0
-            hit = true;
-            cache[setIndex * 2].lastAccess = Date.now();
-          } else if (way1.valid && way1.tag === addr) {
-            // Cache hit in way1
-            hit = true;
-            cache[setIndex * 2 + 1].lastAccess = Date.now();
-          } else {
-            // Cache miss - replace in this set
-            if (!way0.valid) {
-              cache[setIndex * 2] = {
-                valid: true,
-                tag: addr,
-                data: data,
-                way: 0,
-              };
-            } else if (!way1.valid) {
-              cache[setIndex * 2 + 1] = {
-                valid: true,
-                tag: addr,
-                data: data,
-                way: 1,
-              };
-            } else {
-              // Both ways are valid - replace LRU
-              const way0time = way0.lastAccess || 0;
-              const way1time = way1.lastAccess || 0;
-
-              if (way0time < way1time) {
-                // Replace way0
-                cache[setIndex * 2] = {
+              // 3. Substituir por LRU se todas estiverem válidas
+              if (!replaced) {
+                let lruIndex = 0,
+                  lruTime = Infinity;
+                for (let i = 0; i < cache.length; i++) {
+                  if (cache[i].lastAccess < lruTime) {
+                    lruIndex = i;
+                    lruTime = cache[i].lastAccess;
+                  }
+                }
+                cache[lruIndex] = {
                   valid: true,
                   tag: addr,
-                  data: data,
-                  way: 0,
+                  data,
+                  lastAccess: Date.now(),
                 };
-              } else {
-                // Replace way1
-                cache[setIndex * 2 + 1] = {
-                  valid: true,
-                  tag: addr,
-                  data: data,
-                  way: 1,
-                };
+                replaced = true;
               }
             }
-          }
+            break;
+
+          case "set":
+            // Determinar conjunto (4-way)
+            const setNum = addrNum % 4; // 4 conjuntos na cache
+            const setStart = setNum * 4;
+
+            // Verificar vias dentro do conjunto
+            let hitLine = -1;
+            for (let i = setStart; i < setStart + 4; i++) {
+              if (cache[i].valid && cache[i].tag === addr) {
+                hit = true;
+                hitLine = i;
+                cache[i].lastAccess = Date.now();
+                break;
+              }
+            }
+
+            if (!hit) {
+              // Preencher primeira via vazia
+              for (let i = setStart; i < setStart + 4; i++) {
+                if (!cache[i].valid) {
+                  cache[i] = {
+                    valid: true,
+                    tag: addr,
+                    data,
+                    set: setNum,
+                    way: i - setStart,
+                    lastAccess: Date.now(),
+                  };
+                  replaced = true;
+                  hitLine = i;
+                  break;
+                }
+              }
+
+              // Substituir por LRU se ambas vias estiverem ocupadas
+              if (hitLine === -1) {
+                // Find LRU way in set
+                let lruIdx = setStart;
+                for (let i = setStart + 1; i < setStart + 4; i++) {
+                  if (cache[i].lastAccess < cache[lruIdx].lastAccess) {
+                    lruIdx = i;
+                  }
+                }
+                cache[lruIdx] = {
+                  valid: true,
+                  tag: addr,
+                  data,
+                  set: setNum,
+                  way: lruIdx - setStart,
+                  lastAccess: Date.now(),
+                };
+                hitLine = lruIdx;
+                replaced = true;
+              }
+            }
+            break;
         }
 
+        // Atualizar estatísticas
         if (hit) hitCount++;
         updateStats();
         updateCacheDisplay();
 
-        // Highlight the result
+        // Feedback visual
         const cacheDemo = document.getElementById("cacheDemo");
-        cacheDemo.classList.add("access-animation");
-        setTimeout(() => {
-          cacheDemo.classList.remove("access-animation");
-        }, 1000);
-
-        // Show alert
-        alert(
-          `Acesso à memória 0x${addr}: ${
-            hit ? "CACHE HIT" : "CACHE MISS"
-          }\n\nDados: ${data}`,
+        cacheDemo.classList.add(hit ? "bg-green-50" : "bg-red-50");
+        setTimeout(
+          () => cacheDemo.classList.remove("bg-green-50", "bg-red-50"),
+          500,
         );
+
+        // Feedback textual
+        const status = hit
+          ? "CACHE HIT"
+          : replaced
+          ? "CACHE MISS (Substituição)"
+          : "CACHE MISS (Preenchimento)";
+        alert(`Acesso à memória 0x${addr}: ${status}\n\nDados: ${data}`);
       }
 
       // Initialize the cache
