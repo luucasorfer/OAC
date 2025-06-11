@@ -1459,7 +1459,7 @@
         if (mappingType === "direct") {
           for (let i = 0; i < 4; i++) {
             const addr = Math.floor(Math.random() * 16).toString(16);
-            const data = getRandomData();
+            let data = getRandomData();
 
             const index = parseInt(addr, 16) % 8;
             cache[index] = {
@@ -1475,7 +1475,7 @@
           for (let i = 0; i < 4; i++) {
             if (linhasDisponiveis.length === 0) break;
             const addr = Math.floor(Math.random() * 16).toString(16);
-            const data = getRandomData();
+            let data = getRandomData();
 
             // Sorteia uma linha vazia aleatória
             const idx = Math.floor(Math.random() * linhasDisponiveis.length);
@@ -1491,7 +1491,7 @@
           // set associative (2-way, 8 conjuntos = 16 linhas)
           for (let i = 0; i < 8; i++) {
             const addr = Math.floor(Math.random() * 16).toString(16);
-            const data = getRandomData();
+            let data = getRandomData();
 
             const setIndex = parseInt(addr, 16) % 4;
 
@@ -1527,7 +1527,7 @@
 
         for (let i = 0; i < sequentialAddr.length; i++) {
           const addr = sequentialAddr[i].toString(16).toUpperCase();
-          const data = getRandomData();
+          let data = getRandomData(); // Default for misses
           const addrNum = parseInt(addr, 16);
 
           if (mappingType === "direct") {
@@ -1613,7 +1613,7 @@
         }
 
         const addrNum = parseInt(addr, 16);
-        const data = getRandomData();
+        let data = getRandomData();
         totalAccesses++;
         const mappingType = document.getElementById("mappingType").value;
         let hit = false;
@@ -1625,6 +1625,7 @@
             const index = addrNum % 8;
             if (cache[index].valid && cache[index].tag === addr) {
               hit = true;
+              data = cache[index].data; // Use stored data on hit
             } else {
               cache[index] = { valid: true, tag: addr, data };
               replaced = true;
@@ -1637,6 +1638,7 @@
             for (let i = 0; i < cache.length; i++) {
               if (cache[i].valid && cache[i].tag === addr) {
                 hit = true;
+                data = cache[i].data; // Use stored data on hit
                 cache[i].lastAccess = Date.now();
                 break;
               }
@@ -1689,6 +1691,7 @@
               if (cache[i].valid && cache[i].tag === addr) {
                 hit = true;
                 hitLine = i;
+                data = cache[i].data; // Use stored data on hit
                 cache[i].lastAccess = Date.now();
                 break;
               }
